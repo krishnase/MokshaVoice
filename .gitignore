@@ -15,4 +15,5 @@ android/
 *.key
 *.mobileprovision
 *.orig.*
+apps/backend/.env.example
 web-build/
