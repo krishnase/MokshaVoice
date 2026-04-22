@@ -1,0 +1,277 @@
+diff --git a/ios/Core/DynamicTypes/DynamicRawType.swift b/ios/Core/DynamicTypes/DynamicRawType.swift
+index 8fe764a9ee7555edb074854152d05ef2461c69bb..269df63714df27adf363ee3c3301f9688855d760 100644
+--- a/ios/Core/DynamicTypes/DynamicRawType.swift
++++ b/ios/Core/DynamicTypes/DynamicRawType.swift
+@@ -4,6 +4,8 @@
+  A dynamic type that can wrap any type, but it casts only type-compatible values using `as?` keyword.
+  The innermost type of the other dynamic types like `ArrayArgumentType` and `OptionalArgumentType`.
+  */
++private struct UncheckedBox<T>: @unchecked Sendable { let value: T }
++
+ internal struct DynamicRawType<InnerType>: AnyDynamicType {
+   let innerType: InnerType.Type
+ 
+@@ -35,8 +37,9 @@ internal struct DynamicRawType<InnerType>: AnyDynamicType {
+     // TODO: Definitions and JS object builders should have its own dynamic type.
+     // We use `DynamicRawType` for this only temporarily.
+     if let objectBuilder = result as? JavaScriptObjectBuilder {
++      let box = UncheckedBox(value: objectBuilder)
+       return try JavaScriptActor.assumeIsolated {
+-        return try objectBuilder.build(appContext: appContext)
++        return try box.value.build(appContext: appContext)
+       } as Any
+     }
+     return result
+diff --git a/ios/Core/Logging/PersistentFileLog.swift b/ios/Core/Logging/PersistentFileLog.swift
+index 5ddcbb6a3094760fa61b0049917d655b125f94b1..b8575550991f8ac8f58d3661acf806319c2d3ad6 100644
+--- a/ios/Core/Logging/PersistentFileLog.swift
++++ b/ios/Core/Logging/PersistentFileLog.swift
+@@ -2,7 +2,7 @@
+ 
+ import Foundation
+ 
+-public typealias PersistentFileLogFilter = (String) -> Bool
++public typealias PersistentFileLogFilter = @Sendable (String) -> Bool
+ public typealias PersistentFileLogCompletionHandler = (Error?) -> Void
+ 
+ /**
+diff --git a/ios/Core/SharedObjects/SharedObject.swift b/ios/Core/SharedObjects/SharedObject.swift
+index 3e81f83c014319b1a5398a628aebf0a278ca8bc8..d6dd4a8655215026d08c7dec36756e2c0f2e5a0a 100644
+--- a/ios/Core/SharedObjects/SharedObject.swift
++++ b/ios/Core/SharedObjects/SharedObject.swift
+@@ -10,7 +10,7 @@ extension AnySharedObject {
+   }
+ }
+ 
+-open class SharedObject: AnySharedObject {
++open class SharedObject: AnySharedObject, @unchecked Sendable {
+   /**
+    An identifier of the native shared object that maps to the JavaScript object.
+    When the object is not linked with any JavaScript object, its value is 0.
+@@ -59,6 +59,8 @@ open class SharedObject: AnySharedObject {
+   }
+ }
+ 
++private struct UncheckedBox<T>: @unchecked Sendable { let value: T }
++
+ // Unfortunately the `emit` function needs to be defined in the extension.
+ // When put in the class, pack expansion is crashing with `EXC_BAD_ACCESS` code.
+ // See https://github.com/apple/swift/issues/72381 for more details.
+@@ -77,8 +79,9 @@ public extension SharedObject { // swiftlint:disable:this no_grouping_extension
+     }
+ 
+     // Collect arguments and their dynamic types from parameter pack
+-    var argumentPairs: [(AnyArgument, AnyDynamicType)] = []
+-    repeat argumentPairs.append((each arguments, ~(each A).self))
++    var argumentPairsRaw: [(AnyArgument, AnyDynamicType)] = []
++    repeat argumentPairsRaw.append((each arguments, ~(each A).self))
++    let argumentPairs = UncheckedBox(value: argumentPairsRaw)
+ 
+     // Schedule the event to be asynchronously emitted from the runtime's thread
+     runtime.schedule { [weak self, weak appContext] in
+@@ -88,7 +91,7 @@ public extension SharedObject { // swiftlint:disable:this no_grouping_extension
+       }
+ 
+       // Convert native arguments to JS, just like function results
+-      let arguments = argumentPairs.map { argument, dynamicType in
++      let arguments = argumentPairs.value.map { argument, dynamicType in
+         return Conversions.convertFunctionResult(argument, appContext: appContext, dynamicType: dynamicType)
+       }
+ 
+diff --git a/ios/Core/Views/SwiftUI/SwiftUIHostingView.swift b/ios/Core/Views/SwiftUI/SwiftUIHostingView.swift
+index d4ff7a98b2a805190025fe5aff2f4b77a78f2cc2..bc96b380ae39ac3bdba9de7f71bd2555ee27565d 100644
+--- a/ios/Core/Views/SwiftUI/SwiftUIHostingView.swift
++++ b/ios/Core/Views/SwiftUI/SwiftUIHostingView.swift
+@@ -42,7 +42,7 @@ extension ExpoSwiftUI {
+   /**
+    A hosting view that renders a SwiftUI view inside the UIKit view hierarchy.
+    */
+-  public final class HostingView<Props: ViewProps, ContentView: View<Props>>: ExpoView, @MainActor AnyExpoSwiftUIHostingView {
++  public final class HostingView<Props: ViewProps, ContentView: View<Props>>: ExpoView, @preconcurrency AnyExpoSwiftUIHostingView {
+     /**
+      Props object that stores all the props for this particular view.
+      It's an environment object that is observed by the content view.
+diff --git a/ios/Core/Views/SwiftUI/SwiftUIViewFrameObserver.swift b/ios/Core/Views/SwiftUI/SwiftUIViewFrameObserver.swift
+index d62091c41748d46b21fed9c7b6d1bbc1475a6d54..fca2f7d9bdffe20c248389fd6c034d5fd2868dcb 100644
+--- a/ios/Core/Views/SwiftUI/SwiftUIViewFrameObserver.swift
++++ b/ios/Core/Views/SwiftUI/SwiftUIViewFrameObserver.swift
+@@ -26,7 +26,10 @@ extension ExpoSwiftUI {
+ 
+         // Update layout metrics of the `Child` view. The `origin` needs to be frame's origin,
+         // as `bounds` refers to coordinates relative to view's own space (instead of the parent's space).
+-        callback(CGRect(origin: view.frame.origin, size: newValue.size))
++        // UIView KVO callbacks are always dispatched on the main thread.
++        MainActor.assumeIsolated {
++          callback(CGRect(origin: view.frame.origin, size: newValue.size))
++        }
+       }
+     }
+   }
+diff --git a/ios/Core/Views/SwiftUI/SwiftUIVirtualView.swift b/ios/Core/Views/SwiftUI/SwiftUIVirtualView.swift
+index 6d653237f0d58fddd6d9828ca5e0791514c3d4a4..9f736d2d6de1e95a2928b2741421a37efb793631 100644
+--- a/ios/Core/Views/SwiftUI/SwiftUIVirtualView.swift
++++ b/ios/Core/Views/SwiftUI/SwiftUIVirtualView.swift
+@@ -7,6 +7,8 @@ extension ExpoSwiftUI {
+    An NSObject acting as a fake UIView for RCTMountingManager to represent a SwiftUI view.
+    This class is the Swift component of SwiftUIVirtualView, as referenced in ExpoFabricView.swift.
+    */
++  private struct UncheckedBox<T>: @unchecked Sendable { let value: T }
++
+   final class SwiftUIVirtualView<Props: ViewProps, ContentView: View<Props>>: SwiftUIVirtualViewObjC, ExpoSwiftUIView {
+     var uiView: UIView?
+     
+@@ -81,14 +83,17 @@ extension ExpoSwiftUI {
+      Updates the environment object with props, based on the given dictionary with raw props.
+      */
+     override func updateProps(_ rawProps: [String: Any]) {
+-      guard let appContext else {
+-        log.error("AppContext is not available, view props cannot be updated for \(self)")
+-        return
+-      }
+-      do {
+-        try props.updateRawProps(rawProps, appContext: appContext)
+-      } catch let error {
+-        log.error("Updating props for \(self) has failed: \(error.localizedDescription)")
++      let rawPropsBox = UncheckedBox(value: rawProps)
++      MainActor.assumeIsolated {
++        guard let appContext else {
++          log.error("AppContext is not available, view props cannot be updated for \(self)")
++          return
++        }
++        do {
++          try props.updateRawProps(rawPropsBox.value, appContext: appContext)
++        } catch let error {
++          log.error("Updating props for \(self) has failed: \(error.localizedDescription)")
++        }
+       }
+     }
+ 
+@@ -127,39 +132,43 @@ extension ExpoSwiftUI {
+      Fabric calls this function when mounting (attaching) a child component view.
+      */
+     override func mountChildComponentView(_ childComponentView: UIView, index: Int) {
+-      var children = props.children ?? []
+-      let child: any AnyChild
+-      if let view = childComponentView as AnyObject as? (any ExpoSwiftUI.View) {
+-        child = view
+-      } else {
+-        child = UIViewHost(view: childComponentView)
+-      }
+-      children.insert(child, at: index)
++      MainActor.assumeIsolated {
++        var children = props.children ?? []
++        let child: any AnyChild
++        if let view = childComponentView as AnyObject as? (any ExpoSwiftUI.View) {
++          child = view
++        } else {
++          child = UIViewHost(view: childComponentView)
++        }
++        children.insert(child, at: index)
+ 
+-      props.children = children
+-      props.objectWillChange.send()
++        props.children = children
++        props.objectWillChange.send()
++      }
+     }
+ 
+     /**
+      Fabric calls this function when unmounting (detaching) a child component view.
+      */
+     override func unmountChildComponentView(_ childComponentView: UIView, index: Int) {
+-      // Make sure the view has no superview, React Native asserts against this.
+-      childComponentView.removeFromSuperview()
+-
+-      let childViewId: ObjectIdentifier
+-      if let child = childComponentView as AnyObject as? (any AnyChild) {
+-        childViewId = child.id
+-      } else {
+-        childViewId = ObjectIdentifier(childComponentView)
+-      }
++      MainActor.assumeIsolated {
++        // Make sure the view has no superview, React Native asserts against this.
++        childComponentView.removeFromSuperview()
++
++        let childViewId: ObjectIdentifier
++        if let child = childComponentView as AnyObject as? (any AnyChild) {
++          childViewId = child.id
++        } else {
++          childViewId = ObjectIdentifier(childComponentView)
++        }
+ 
+-      if let children = props.children {
+-        props.children = children.filter({ $0.id != childViewId })
+-        #if DEBUG
+-        assert(props.children?.count == children.count - 1, "Failed to remove child view")
+-        #endif
+-        props.objectWillChange.send()
++        if let children = props.children {
++          props.children = children.filter({ $0.id != childViewId })
++          #if DEBUG
++          assert(props.children?.count == children.count - 1, "Failed to remove child view")
++          #endif
++          props.objectWillChange.send()
++        }
+       }
+     }
+ 
+@@ -193,7 +202,7 @@ extension ExpoSwiftUI {
+ 
+ // MARK: - ViewWrapper
+ 
+-extension ExpoSwiftUI.SwiftUIVirtualView: @MainActor ExpoSwiftUI.ViewWrapper {
++extension ExpoSwiftUI.SwiftUIVirtualView: @preconcurrency ExpoSwiftUI.ViewWrapper {
+   func getWrappedView() -> Any {
+     if let wrapper = contentView as? ExpoSwiftUI.ViewWrapper {
+       return wrapper.getWrappedView()
+diff --git a/ios/Core/Views/ViewDefinition.swift b/ios/Core/Views/ViewDefinition.swift
+index 5dc73e34a3c1c3687f2103ad9481ae5a0b9cae2c..a8e43eea25c169fa7d2d9d9d59971a1fe95ed672 100644
+--- a/ios/Core/Views/ViewDefinition.swift
++++ b/ios/Core/Views/ViewDefinition.swift
+@@ -118,7 +118,7 @@ extension ConcurrentFunctionDefinition: ViewDefinitionFunctionElement {
+   public typealias ViewType = FirstArgType
+ }
+ 
+-extension UIView: @MainActor AnyArgument {
++@MainActor extension UIView: AnyArgument {
+   public static func getDynamicType() -> AnyDynamicType {
+     return DynamicViewType(innerType: Self.self)
+   }
+diff --git a/ios/DevTools/URLAuthenticationChallengeForwardSender.swift b/ios/DevTools/URLAuthenticationChallengeForwardSender.swift
+index 8c3efcbec2cc7fa26963ea0fe63a4919317c69d8..3ea385e0ef62eb740bf3ad91523d7227e6f491b7 100644
+--- a/ios/DevTools/URLAuthenticationChallengeForwardSender.swift
++++ b/ios/DevTools/URLAuthenticationChallengeForwardSender.swift
+@@ -3,7 +3,7 @@
+ /**
+  A helper class to forward URLAuthenticationChallenge completion handler to URLAuthenticationChallengeSender
+  */
+-internal final class URLAuthenticationChallengeForwardSender: NSObject, URLAuthenticationChallengeSender {
++internal final class URLAuthenticationChallengeForwardSender: NSObject, URLAuthenticationChallengeSender, @unchecked Sendable {
+   let completionHandler: (URLSession.AuthChallengeDisposition, URLCredential?) -> Void
+ 
+   init(completionHandler: @escaping (URLSession.AuthChallengeDisposition, URLCredential?) -> Void) {
+diff --git a/ios/DevTools/URLSessionSessionDelegateProxy.swift b/ios/DevTools/URLSessionSessionDelegateProxy.swift
+index dbc5b659dc9c0eaa5a268e2b268b5f94ae0bd1f0..1f2c9624d59e9f89266d5a4d258af2c5b8db959c 100644
+--- a/ios/DevTools/URLSessionSessionDelegateProxy.swift
++++ b/ios/DevTools/URLSessionSessionDelegateProxy.swift
+@@ -3,7 +3,7 @@
+ /**
+  Shared URLSessionDelegate instance and delete calls back to ExpoRequestInterceptorProtocol instances.
+  */
+-public final class URLSessionSessionDelegateProxy: NSObject, URLSessionDataDelegate {
++public final class URLSessionSessionDelegateProxy: NSObject, URLSessionDataDelegate, @unchecked Sendable {
+   private let dispatchQueue: DispatchQueue
+   private var delegateMap: [AnyHashable: URLSessionDataDelegate] = [:]
+ 
+diff --git a/ios/ReactDelegates/ExpoReactDelegate.swift b/ios/ReactDelegates/ExpoReactDelegate.swift
+index 81871a094017afc57b272ff3716812a5d119e142..42d7950ced264ba7c33dbfe20258bfc8346eb90a 100644
+--- a/ios/ReactDelegates/ExpoReactDelegate.swift
++++ b/ios/ReactDelegates/ExpoReactDelegate.swift
+@@ -38,6 +38,6 @@ public class ExpoReactDelegate: NSObject {
+   public func createRootViewController() -> UIViewController {
+     return self.handlers.lazy
+       .compactMap { $0.createRootViewController() }
+-      .first(where: { _ in true }) ?? UIViewController()
++      .first(where: { _ in true }) ?? MainActor.assumeIsolated { UIViewController() }
+   }
+ }

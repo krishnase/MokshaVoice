@@ -1,0 +1,131 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String         @id @default(uuid())
+  phone         String         @unique
+  role          Role           @default(CUSTOMER)
+  displayName   String?
+  fcmToken      String?
+  rcAppUserId   String?        @unique
+  createdAt     DateTime       @default(now())
+  subscription  Subscription?
+  sessions      Session[]      @relation("CustomerSessions")
+  messages      Message[]
+  notifications Notification[]
+}
+
+enum Role {
+  CUSTOMER
+  DECODER
+  MENTOR
+  ADMIN
+}
+
+model Subscription {
+  id               String    @id @default(uuid())
+  userId           String    @unique
+  user             User      @relation(fields: [userId], references: [id])
+  plan             Plan      @default(FREE)
+  provider         Provider?
+  providerSubId    String?
+  status           SubStatus @default(ACTIVE)
+  dreamsUsed       Int       @default(0)
+  cycleResetAt     DateTime  @default(now())
+  currentPeriodEnd DateTime?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  @@index([userId, status])
+}
+
+enum Plan {
+  FREE
+  PREMIUM
+}
+
+enum Provider {
+  APPLE
+  GOOGLE
+  STRIPE
+}
+
+enum SubStatus {
+  ACTIVE
+  CANCELLED
+  EXPIRED
+  BILLING_ISSUE
+}
+
+model Session {
+  id           String               @id @default(uuid())
+  customerId   String
+  customer     User                 @relation("CustomerSessions", fields: [customerId], references: [id])
+  claimedBy    String?
+  status       SessionStatus        @default(NEW)
+  priority     Int                  @default(2)
+  title        String?
+  createdAt    DateTime             @default(now())
+  completedAt  DateTime?
+  messages     Message[]
+  participants SessionParticipant[]
+
+  @@index([status, priority])
+  @@index([customerId])
+}
+
+enum SessionStatus {
+  NEW
+  IN_PROGRESS
+  COMPLETED
+}
+
+model SessionParticipant {
+  sessionId     String
+  userId        String
+  roleInSession Role
+  joinedAt      DateTime @default(now())
+  session       Session  @relation(fields: [sessionId], references: [id])
+
+  @@id([sessionId, userId])
+}
+
+model Message {
+  id               String      @id @default(uuid())
+  sessionId        String
+  session          Session     @relation(fields: [sessionId], references: [id])
+  senderId         String
+  sender           User        @relation(fields: [senderId], references: [id])
+  type             MessageType
+  content          String?
+  audioUrl         String?
+  audioDurationS   Int?
+  isDreamSubmission Boolean    @default(false)
+  createdAt        DateTime    @default(now())
+
+  @@index([sessionId, createdAt])
+}
+
+enum MessageType {
+  VOICE
+  TEXT
+  SYSTEM
+}
+
+model Notification {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  type      String
+  payload   Json
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([userId, read])
+}
