@@ -5,10 +5,10 @@ interface Props {
   audioUrl: string;
   durationS: number;
   senderName: string | null;
+  senderRole?: string;
   isMe: boolean;
   isDreamSubmission: boolean;
   createdAt: string;
-  // from parent useAudioPlayer
   activeMessageId: string | null;
   isPlaying: boolean;
   isLoading: boolean;
@@ -28,11 +28,18 @@ function formatHHMMSS(isoDate: string): string {
   return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 }
 
+function roleColor(role?: string): string {
+  if (!role) return '#9B5DE5';
+  if (role === 'CUSTOMER') return '#60A5FA';          // blue
+  return '#34D399';                                    // green for DECODER/MENTOR/ADMIN
+}
+
 export function VoiceBubble({
   messageId,
   audioUrl,
   durationS,
   senderName,
+  senderRole,
   isMe,
   isDreamSubmission,
   createdAt,
@@ -49,24 +56,32 @@ export function VoiceBubble({
   const progress = isActive && totalMs > 0 ? positionMs / totalMs : 0;
 
   const handlePress = () => {
-    if (isActive && isPlaying) {
-      onPause();
-    } else {
-      onPlay(messageId, audioUrl);
-    }
+    if (isActive && isPlaying) onPause();
+    else onPlay(messageId, audioUrl);
   };
+
+  const bubbleBg = isMe
+    ? '#9B5DE5'
+    : senderRole === 'CUSTOMER'
+      ? '#1E3A5F'   // dark blue for customer
+      : '#0F3025';  // dark green for decoder/admin
+
+  const trackBg = isMe ? 'rgba(255,255,255,0.2)' : 'rgba(255,255,255,0.12)';
+  const barBg = isMe ? 'rgba(255,255,255,0.85)' : roleColor(senderRole) + 'CC';
 
   return (
     <View style={[styles.container, isMe ? styles.containerMe : styles.containerThem]}>
       {!isMe && senderName && (
-        <Text style={styles.senderName}>{senderName}</Text>
+        <Text style={[styles.senderName, { color: roleColor(senderRole) }]}>
+          {senderName}
+        </Text>
       )}
       {isDreamSubmission && (
-        <View style={styles.dreamBadge}>
+        <View style={[styles.dreamBadge, { backgroundColor: '#2A1A5E' }]}>
           <Text style={styles.dreamBadgeText}>Dream Submission</Text>
         </View>
       )}
-      <View style={[styles.bubble, isMe ? styles.bubbleMe : styles.bubbleThem]}>
+      <View style={[styles.bubble, { backgroundColor: bubbleBg }]}>
         <TouchableOpacity
           onPress={handlePress}
           style={styles.playBtn}
@@ -78,8 +93,8 @@ export function VoiceBubble({
         </TouchableOpacity>
 
         <View style={styles.right}>
-          <View style={styles.progressTrack}>
-            <View style={[styles.progressBar, { width: `${progress * 100}%` }]} />
+          <View style={[styles.progressTrack, { backgroundColor: trackBg }]}>
+            <View style={[styles.progressBar, { width: `${progress * 100}%`, backgroundColor: barBg }]} />
           </View>
           <View style={styles.timeRow}>
             <Text style={styles.time}>
@@ -100,9 +115,8 @@ const styles = StyleSheet.create({
   container: { maxWidth: '80%', marginVertical: 4 },
   containerMe: { alignSelf: 'flex-end', alignItems: 'flex-end' },
   containerThem: { alignSelf: 'flex-start', alignItems: 'flex-start' },
-  senderName: { color: '#9B5DE5', fontSize: 12, marginBottom: 2, marginLeft: 4 },
+  senderName: { fontSize: 12, fontWeight: '600', marginBottom: 2, marginLeft: 4 },
   dreamBadge: {
-    backgroundColor: '#2A1A5E',
     borderRadius: 4,
     paddingHorizontal: 8,
     paddingVertical: 2,
@@ -119,8 +133,6 @@ const styles = StyleSheet.create({
     gap: 10,
     minWidth: 180,
   },
-  bubbleMe: { backgroundColor: '#9B5DE5' },
-  bubbleThem: { backgroundColor: '#2A2A40' },
   playBtn: {
     width: 36,
     height: 36,
@@ -129,17 +141,15 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  playIcon: { fontSize: 16 },
+  playIcon: { fontSize: 16, color: '#FFF' },
   right: { flex: 1, gap: 4 },
   progressTrack: {
     height: 4,
-    backgroundColor: 'rgba(255,255,255,0.2)',
     borderRadius: 2,
     overflow: 'hidden',
   },
   progressBar: {
     height: '100%',
-    backgroundColor: 'rgba(255,255,255,0.8)',
     borderRadius: 2,
   },
   timeRow: { flexDirection: 'row', justifyContent: 'space-between' },

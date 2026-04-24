@@ -54,6 +54,10 @@ export function useAudioUpload(): UseAudioUploadReturn {
   const [error, setError] = useState<string | null>(null);
 
   const startRecording = useCallback(async () => {
+    // Sync guard: if a recording object exists it hasn't been fully unloaded yet.
+    // Starting a second prepare call would throw "only one recording object can be
+    // prepared at a given time" — bail out silently and let the in-flight stop finish.
+    if (recordingRef.current) return;
     setError(null);
     try {
       const { status } = await Audio.requestPermissionsAsync();
@@ -82,6 +86,8 @@ export function useAudioUpload(): UseAudioUploadReturn {
       }, 100);
     } catch (err: unknown) {
       const e = err as { message?: string };
+      // Reset audio mode so the next attempt can set it correctly
+      try { await Audio.setAudioModeAsync({ allowsRecordingIOS: false }); } catch {}
       setError(e.message ?? 'Failed to start recording');
     }
   }, []);

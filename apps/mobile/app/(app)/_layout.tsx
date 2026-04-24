@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { Platform } from 'react-native';
-import { Redirect, Stack } from 'expo-router';
+import { Redirect, Stack, useRouter, useSegments } from 'expo-router';
 import * as Notifications from 'expo-notifications';
 import Purchases, { LOG_LEVEL } from 'react-native-purchases';
 import { useAuthStore } from '@/src/stores/authStore';
@@ -23,9 +23,32 @@ const RC_API_KEY = Platform.select({
   default: process.env['EXPO_PUBLIC_RC_IOS_KEY']!,
 });
 
+const NON_CUSTOMER_VALID_SEGMENTS = ['(customer)', '(decoder)', '(admin)', 'notifications', 'mode-select'];
+
 export default function AppLayout() {
   const { user, isHydrated } = useAuthStore();
   const { setSubscription } = useSubscriptionStore();
+  const router = useRouter();
+  const segments = useSegments();
+
+  // Redirect to the correct home screen when role is known
+  useEffect(() => {
+    if (!isHydrated || !user) return;
+
+    if (user.role === 'CUSTOMER') {
+      const onCustomer = segments.includes('(customer)' as never);
+      const onShared = segments.includes('notifications' as never);
+      if (!onCustomer && !onShared) {
+        router.replace('/(app)/(customer)' as never);
+      }
+    } else {
+      // Non-customers pick their mode from the hub; any valid segment is fine
+      const onValidSegment = NON_CUSTOMER_VALID_SEGMENTS.some((s) => segments.includes(s as never));
+      if (!onValidSegment) {
+        router.replace('/(app)/mode-select' as never);
+      }
+    }
+  }, [isHydrated, user?.role]);
   // hydrate() is called in the root _layout.tsx — no need to repeat it here
 
   // RevenueCat initialization — runs once, identifies user after login
@@ -94,6 +117,7 @@ export default function AppLayout() {
 
   return (
     <Stack screenOptions={{ headerShown: false }}>
+      <Stack.Screen name="mode-select" />
       <Stack.Screen name="(customer)" />
       <Stack.Screen name="(decoder)" />
       <Stack.Screen name="(admin)" />

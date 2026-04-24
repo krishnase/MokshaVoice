@@ -1,0 +1,77 @@
+diff --git a/ios/EXAV/EXAV.h b/ios/EXAV/EXAV.h
+index 42a79e1183530a18ea5b515700755bd6560ac2a8..18975b87161aafd5adf382059fcb0db18650cc7d 100644
+--- a/ios/EXAV/EXAV.h
++++ b/ios/EXAV/EXAV.h
+@@ -7,7 +7,16 @@
+ #import <ExpoModulesCore/EXModuleRegistryConsumer.h>
+ #import <ExpoModulesCore/EXAppLifecycleListener.h>
+ #import <ExpoModulesCore/EXExportedModule.h>
+-#import <ExpoModulesCore/EXEventEmitter.h>
++// EXEventEmitter + EXEventEmitterService removed in expo-modules-core 55; stub inline
++@protocol EXEventEmitter <NSObject>
++- (NSArray<NSString *> *)supportedEvents;
++- (void)startObserving;
++- (void)stopObserving;
++@end
++
++@protocol EXEventEmitterService <NSObject>
++- (void)sendEventWithName:(NSString *)name body:(id)body;
++@end
+ #import <EXAV/EXAVObject.h>
+ 
+ typedef NS_OPTIONS(NSUInteger, EXAudioInterruptionMode)
+diff --git a/ios/EXAV/EXAV.m b/ios/EXAV/EXAV.m
+index 7153d286adb56461bfecf916e164c932a17b5d56..62d3ad7ee64d1d541403f748f653feb3a77a40b4 100644
+--- a/ios/EXAV/EXAV.m
++++ b/ios/EXAV/EXAV.m
+@@ -3,7 +3,7 @@
+ #import <AVFoundation/AVFoundation.h>
+ 
+ #import <ExpoModulesCore/EXUIManager.h>
+-#import <ExpoModulesCore/EXEventEmitterService.h>
++// EXEventEmitterService stub is in EXAV.h
+ #import <ExpoModulesCore/EXAppLifecycleService.h>
+ #import <ExpoModulesCore/EXFileSystemInterface.h>
+ #import <ExpoModulesCore/EXPermissionsInterface.h>
+diff --git a/ios/EXAV/EXAVPlayerData.m b/ios/EXAV/EXAVPlayerData.m
+index 6f6998d932a641bc94d5a4ffdb8ea8965e6fadf6..d9004d88557678c675867b4576a632e4cbf4ce20 100644
+--- a/ios/EXAV/EXAVPlayerData.m
++++ b/ios/EXAV/EXAVPlayerData.m
+@@ -2,6 +2,9 @@
+ 
+ #import <EXAV/EXAVPlayerData.h>
+ #import <MobileCoreServices/MobileCoreServices.h>
++#ifndef EXLogWarn
++#import <EXCore/EXDefines.h>
++#endif
+ 
+ // This struct is passed between the MTAudioProcessingTap callbacks.
+ typedef struct AVAudioTapProcessorContext {
+diff --git a/ios/EXAV/EXAVTV.m b/ios/EXAV/EXAVTV.m
+index b6fccda059b6d02deda15173c631265c69c86e2a..6076133d2d3e18e67b98bdf926a620e45fd540cf 100644
+--- a/ios/EXAV/EXAVTV.m
++++ b/ios/EXAV/EXAVTV.m
+@@ -3,7 +3,7 @@
+ #import <AVFoundation/AVFoundation.h>
+ 
+ #import <ExpoModulesCore/EXUIManager.h>
+-#import <ExpoModulesCore/EXEventEmitterService.h>
++// EXEventEmitterService stub is in EXAV.h
+ #import <ExpoModulesCore/EXAppLifecycleService.h>
+ #import <ExpoModulesCore/EXFileSystemInterface.h>
+ #import <ExpoModulesCore/EXPermissionsInterface.h>
+diff --git a/ios/EXAV/Video/EXVideoView.h b/ios/EXAV/Video/EXVideoView.h
+index f7ff4ee0ba2bd14b6704a793ceaf1f768bd36770..c4b8573581c493898673f5329887f84f729bd94c 100644
+--- a/ios/EXAV/Video/EXVideoView.h
++++ b/ios/EXAV/Video/EXVideoView.h
+@@ -1,7 +1,9 @@
+ // Copyright 2015-present 650 Industries. All rights reserved.
+ 
+ #import <ExpoModulesCore/EXModuleRegistry.h>
+-#import <ExpoModulesCore/EXLegacyExpoViewProtocol.h>
++// EXLegacyExpoViewProtocol removed in expo-modules-core 53+; stub inline
++@protocol EXLegacyExpoViewProtocol <NSObject>
++@end
+ 
+ #import <EXAV/EXAVObject.h>
+ #import <EXAV/EXVideoPlayerViewControllerDelegate.h>

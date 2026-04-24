@@ -18,6 +18,7 @@ export function useSessions(status?: SessionStatus) {
     },
     getNextPageParam: (last) => last.nextCursor ?? undefined,
     initialPageParam: undefined as string | undefined,
+    refetchInterval: 30_000,
   });
 }
 

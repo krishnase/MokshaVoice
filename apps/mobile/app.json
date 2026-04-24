@@ -23,6 +23,8 @@
     "android": {
       "package": "com.mokshavoice.app",
       "versionCode": 1,
+      "usesCleartextTraffic": true,
+      "googleServicesFile": "./google-services.json",
       "permissions": [
         "android.permission.RECORD_AUDIO",
         "android.permission.INTERNET",
@@ -44,6 +46,9 @@
         {
           "ios": {
             "deploymentTarget": "16.0"
+          },
+          "android": {
+            "usesCleartextTraffic": true
           }
         }
       ],

@@ -4,6 +4,7 @@ import { prisma } from '../../lib/prisma.js';
 import { quotaService } from '../../services/QuotaService.js';
 import { audioService } from '../../services/AudioService.js';
 import { requireAuth } from '../../plugins/requireAuth.js';
+import { enqueueAutoAssign } from '../../workers/autoAssign.js';
 
 const sessionQuerySchema = z.object({
   status: z.enum(['NEW', 'IN_PROGRESS', 'COMPLETED']).optional(),
@@ -24,19 +25,20 @@ export const sessionRoutes: FastifyPluginAsync = async (fastify) => {
   fastify.post('/', async (request, reply) => {
     const userId = request.user.sub;
     const { session, quota } = await createSessionForUser(userId);
+    // Fire-and-forget: auto-assign if this customer has a prior decoder relationship
+    void enqueueAutoAssign(session.id, userId);
     return reply.status(201).send({ session, quota });
   });
 
-  // GET /sessions
+  // GET /sessions — always returns the caller's own submitted dreams, any role
   fastify.get('/', async (request, reply) => {
     const userId = request.user.sub;
-    const role = request.user.role;
     const q = sessionQuerySchema.parse(request.query);
 
-    const where =
-      role === 'CUSTOMER'
-        ? { customerId: userId, ...(q.status ? { status: q.status } : {}) }
-        : { ...(q.status ? { status: q.status } : {}) };
+    const where = {
+      customerId: userId,
+      ...(q.status ? { status: q.status } : {}),
+    };
 
     const sessions = await prisma.session.findMany({
       where,
@@ -69,7 +71,11 @@ export const sessionRoutes: FastifyPluginAsync = async (fastify) => {
     const { id } = z.object({ id: z.string().uuid() }).parse(request.params);
     const session = await prisma.session.findUnique({
       where: { id },
-      include: { participants: true, _count: { select: { messages: true } } },
+      include: {
+        participants: true,
+        _count: { select: { messages: true } },
+        claimer: { select: { id: true, displayName: true, phone: true } },
+      },
     });
     if (!session) return reply.status(404).send({ error: 'Session not found' });
     return reply.send(session);
@@ -85,6 +91,7 @@ export const sessionRoutes: FastifyPluginAsync = async (fastify) => {
       data: {
         claimedBy: decoderId,
         status: 'IN_PROGRESS',
+        claimedAt: new Date(),
         participants: {
           upsert: {
             where: { sessionId_userId: { sessionId: id, userId: decoderId } },
@@ -93,9 +100,113 @@ export const sessionRoutes: FastifyPluginAsync = async (fastify) => {
           },
         },
       },
+      include: { claimer: { select: { id: true, displayName: true, phone: true } } },
     });
 
+    fastify.io.to(id).emit('session:status', { session_id: id, status: 'IN_PROGRESS', claimed_by: decoderId });
     return reply.send(session);
+  });
+
+  // PATCH /sessions/:id/assign — admin/mentor/decoder assigns to a specific decoder
+  fastify.patch('/:id/assign', async (request, reply) => {
+    const { id } = z.object({ id: z.string().uuid() }).parse(request.params);
+    const { decoderId } = z.object({ decoderId: z.string().uuid() }).parse(request.body);
+    const callerRole = request.user.role;
+
+    if (!['DECODER', 'MENTOR', 'ADMIN'].includes(callerRole)) {
+      return reply.status(403).send({ error: 'Forbidden' });
+    }
+
+    const target = await prisma.user.findUnique({
+      where: { id: decoderId },
+      select: { role: true },
+    });
+    if (!target || !['DECODER', 'MENTOR', 'ADMIN'].includes(target.role)) {
+      return reply.status(400).send({ error: 'Target user is not a decoder' });
+    }
+
+    const session = await prisma.session.update({
+      where: { id, status: 'NEW' },
+      data: {
+        claimedBy: decoderId,
+        status: 'IN_PROGRESS',
+        claimedAt: new Date(),
+        participants: {
+          upsert: {
+            where: { sessionId_userId: { sessionId: id, userId: decoderId } },
+            create: { userId: decoderId, roleInSession: 'DECODER' },
+            update: {},
+          },
+        },
+      },
+      include: { claimer: { select: { id: true, displayName: true, phone: true } } },
+    });
+
+    fastify.io.to(id).emit('session:status', { session_id: id, status: 'IN_PROGRESS', claimed_by: decoderId });
+    return reply.send(session);
+  });
+
+  // PATCH /sessions/:id/reassign — current claimer or admin reassigns an in-progress session
+  fastify.patch('/:id/reassign', async (request, reply) => {
+    const { id } = z.object({ id: z.string().uuid() }).parse(request.params);
+    const { decoderId } = z.object({ decoderId: z.string().uuid() }).parse(request.body);
+    const callerId = request.user.sub;
+    const callerRole = request.user.role;
+
+    const session = await prisma.session.findUnique({ where: { id }, select: { claimedBy: true, status: true } });
+    if (!session || session.status !== 'IN_PROGRESS') {
+      return reply.status(400).send({ error: 'Session is not in progress' });
+    }
+    if (session.claimedBy !== callerId && !['ADMIN', 'MENTOR'].includes(callerRole)) {
+      return reply.status(403).send({ error: 'Only the assigned decoder or an admin can reassign' });
+    }
+
+    const target = await prisma.user.findUnique({ where: { id: decoderId }, select: { role: true } });
+    if (!target || !['DECODER', 'MENTOR', 'ADMIN'].includes(target.role)) {
+      return reply.status(400).send({ error: 'Target user is not a decoder' });
+    }
+
+    const updated = await prisma.session.update({
+      where: { id },
+      data: {
+        claimedBy: decoderId,
+        claimedAt: new Date(),
+        participants: {
+          upsert: {
+            where: { sessionId_userId: { sessionId: id, userId: decoderId } },
+            create: { userId: decoderId, roleInSession: 'DECODER' },
+            update: {},
+          },
+        },
+      },
+      include: { claimer: { select: { id: true, displayName: true, phone: true } } },
+    });
+
+    fastify.io.to(id).emit('session:status', { session_id: id, status: 'IN_PROGRESS', claimed_by: decoderId });
+    return reply.send(updated);
+  });
+
+  // PATCH /sessions/:id/unclaim — current claimer or admin returns a session to the pending queue
+  fastify.patch('/:id/unclaim', async (request, reply) => {
+    const { id } = z.object({ id: z.string().uuid() }).parse(request.params);
+    const callerId = request.user.sub;
+    const callerRole = request.user.role;
+
+    const session = await prisma.session.findUnique({ where: { id }, select: { claimedBy: true, status: true } });
+    if (!session || session.status !== 'IN_PROGRESS') {
+      return reply.status(400).send({ error: 'Session is not in progress' });
+    }
+    if (session.claimedBy !== callerId && !['ADMIN', 'MENTOR'].includes(callerRole)) {
+      return reply.status(403).send({ error: 'Only the assigned decoder or an admin can unclaim' });
+    }
+
+    const updated = await prisma.session.update({
+      where: { id },
+      data: { status: 'NEW', claimedBy: null, claimedAt: null },
+    });
+
+    fastify.io.to(id).emit('session:status', { session_id: id, status: 'NEW', claimed_by: null });
+    return reply.send(updated);
   });
 
   // PATCH /sessions/:id/complete
@@ -105,6 +216,7 @@ export const sessionRoutes: FastifyPluginAsync = async (fastify) => {
       where: { id, status: 'IN_PROGRESS' },
       data: { status: 'COMPLETED', completedAt: new Date() },
     });
+    fastify.io.to(id).emit('session:status', { session_id: id, status: 'COMPLETED', claimed_by: session.claimedBy });
     return reply.send(session);
   });
 
@@ -166,22 +278,20 @@ export const sessionRoutes: FastifyPluginAsync = async (fastify) => {
 
       const message = await prisma.message.create({
         data: {
-          id: voiceBody.messageId,          // pin DB id to audio filename id
+          id: voiceBody.messageId,
           sessionId: id,
           senderId,
           type: 'VOICE',
-          audioUrl: voiceBody.audioKey,     // store raw S3 key — signed on read
+          audioUrl: voiceBody.audioKey,
           audioDurationS: voiceBody.audioDurationS,
           isDreamSubmission: voiceBody.isDreamSubmission,
         },
         include: { sender: { select: { id: true, displayName: true, role: true } } },
       });
 
-      // Serve with a fresh signed URL in the response
-      return reply.status(201).send({
-        ...message,
-        audioUrl: audioService.getPlaybackUrl(message.audioUrl!),
-      });
+      const signedMessage = { ...message, audioUrl: audioService.getPlaybackUrl(message.audioUrl!) };
+      fastify.io.to(id).emit('message:new', { message: signedMessage as never });
+      return reply.status(201).send(signedMessage);
     }
 
     // TEXT message
@@ -194,6 +304,7 @@ export const sessionRoutes: FastifyPluginAsync = async (fastify) => {
       include: { sender: { select: { id: true, displayName: true, role: true } } },
     });
 
+    fastify.io.to(id).emit('message:new', { message: message as never });
     return reply.status(201).send(message);
   });
 };

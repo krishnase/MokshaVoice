@@ -1,4 +1,4 @@
-import * as admin from 'firebase-admin';
+import { getMessaging } from 'firebase-admin/messaging';
 import { prisma } from '../lib/prisma.js';
 import type { NotificationType } from '@mokshavoice/shared-types';
 
@@ -18,7 +18,7 @@ export class NotificationService {
     if (!user?.fcmToken) return;
 
     try {
-      await admin.messaging().send({
+      await getMessaging().send({
         token: user.fcmToken,
         notification: { title: payload.title, body: payload.body },
         data: payload.data,

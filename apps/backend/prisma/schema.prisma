@@ -8,17 +8,19 @@ datasource db {
 }
 
 model User {
-  id            String         @id @default(uuid())
-  phone         String         @unique
-  role          Role           @default(CUSTOMER)
-  displayName   String?
-  fcmToken      String?
-  rcAppUserId   String?        @unique
-  createdAt     DateTime       @default(now())
-  subscription  Subscription?
-  sessions      Session[]      @relation("CustomerSessions")
-  messages      Message[]
-  notifications Notification[]
+  id              String               @id @default(uuid())
+  phone           String               @unique
+  role            Role                 @default(CUSTOMER)
+  displayName     String?
+  fcmToken        String?
+  rcAppUserId     String?              @unique
+  createdAt       DateTime             @default(now())
+  subscription    Subscription?
+  sessions        Session[]            @relation("CustomerSessions")
+  claimedSessions Session[]            @relation("ClaimedSessions")
+  participants    SessionParticipant[]
+  messages        Message[]
+  notifications   Notification[]
 }
 
 enum Role {
@@ -68,10 +70,12 @@ model Session {
   customerId   String
   customer     User                 @relation("CustomerSessions", fields: [customerId], references: [id])
   claimedBy    String?
+  claimer      User?                @relation("ClaimedSessions", fields: [claimedBy], references: [id])
   status       SessionStatus        @default(NEW)
   priority     Int                  @default(2)
   title        String?
   createdAt    DateTime             @default(now())
+  claimedAt    DateTime?
   completedAt  DateTime?
   messages     Message[]
   participants SessionParticipant[]
@@ -92,6 +96,7 @@ model SessionParticipant {
   roleInSession Role
   joinedAt      DateTime @default(now())
   session       Session  @relation(fields: [sessionId], references: [id])
+  user          User     @relation(fields: [userId], references: [id])
 
   @@id([sessionId, userId])
 }

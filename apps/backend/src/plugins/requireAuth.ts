@@ -1,4 +1,4 @@
-import type { FastifyInstance, FastifyRequest, FastifyReply, HookHandlerDoneFunction } from 'fastify';
+import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import type { Role } from '@mokshavoice/shared-types';
 
 declare module 'fastify' {
@@ -11,7 +11,6 @@ export function requireAuth(fastify: FastifyInstance, requiredRoles?: Role[]) {
   return async (
     request: FastifyRequest,
     reply: FastifyReply,
-    done?: HookHandlerDoneFunction,
   ) => {
     try {
       await request.jwtVerify();

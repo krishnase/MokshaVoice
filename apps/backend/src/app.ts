@@ -6,11 +6,17 @@ import multipart from '@fastify/multipart';
 import rateLimit from '@fastify/rate-limit';
 import { Server as SocketIOServer } from 'socket.io';
 import { createAdapter } from '@socket.io/redis-adapter';
-import { createClient } from 'ioredis';
+import Redis from 'ioredis';
 import type {
   SocketClientToServerEvents,
   SocketServerToClientEvents,
 } from '@mokshavoice/shared-types';
+
+declare module 'fastify' {
+  interface FastifyInstance {
+    io: SocketIOServer<SocketClientToServerEvents, SocketServerToClientEvents>;
+  }
+}
 
 import { prisma } from './lib/prisma.js';
 import { env } from './lib/env.js';
@@ -19,6 +25,9 @@ import { authRoutes } from './routes/auth/index.js';
 import { sessionRoutes } from './routes/sessions/index.js';
 import { subscriptionRoutes } from './routes/subscriptions/index.js';
 import { audioRoutes } from './routes/audio.js';
+import { dreamsRoute } from './routes/dreams.js';
+import { decoderRoutes } from './routes/decoder.js';
+import { adminRoutes } from './routes/admin.js';
 import { revenueCatWebhookRoute } from './routes/webhooks/revenuecat.js';
 import { stripeWebhookRoute } from './routes/webhooks/stripe.js';
 
@@ -44,7 +53,7 @@ export async function buildApp(): Promise<FastifyInstance> {
   await app.register(rateLimit, {
     max: 120,
     timeWindow: '1 minute',
-    redis: createClient({ host: env.REDIS_HOST, port: env.REDIS_PORT, password: env.REDIS_PASSWORD }),
+    redis: new Redis({ host: env.REDIS_HOST, port: env.REDIS_PORT, password: env.REDIS_PASSWORD }),
   });
 
   // ── JWT ──────────────────────────────────────────────────────────────────────
@@ -67,6 +76,9 @@ export async function buildApp(): Promise<FastifyInstance> {
   await app.register(sessionRoutes, { prefix: '/v1/sessions' });
   await app.register(subscriptionRoutes, { prefix: '/v1' });
   await app.register(audioRoutes, { prefix: '/v1/audio' });
+  await app.register(dreamsRoute, { prefix: '/v1/dreams' });
+  await app.register(decoderRoutes, { prefix: '/v1/decoder' });
+  await app.register(adminRoutes, { prefix: '/v1/admin' });
 
   // ── Health check ─────────────────────────────────────────────────────────────
   app.get('/health', async () => ({ status: 'ok', ts: new Date().toISOString() }));
@@ -88,7 +100,7 @@ export async function buildApp(): Promise<FastifyInstance> {
 export async function buildSocketIO(
   app: FastifyInstance,
 ): Promise<SocketIOServer<SocketClientToServerEvents, SocketServerToClientEvents>> {
-  const pubClient = createClient({
+  const pubClient = new Redis({
     host: env.REDIS_HOST,
     port: env.REDIS_PORT,
     password: env.REDIS_PASSWORD,
@@ -102,6 +114,9 @@ export async function buildSocketIO(
       adapter: createAdapter(pubClient, subClient),
     },
   );
+
+  // Make io accessible in route handlers via fastify.io
+  app.decorate('io', io);
 
   io.use(async (socket, next) => {
     try {

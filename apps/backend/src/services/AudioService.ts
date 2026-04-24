@@ -119,6 +119,19 @@ export class AudioService {
     });
   }
 
+  // ── Direct buffer upload (used by POST /v1/dreams) ───────────────────────
+
+  async uploadBuffer(key: string, buffer: Buffer, contentType = 'audio/m4a'): Promise<void> {
+    await this.s3.send(
+      new PutObjectCommand({
+        Bucket: env.S3_BUCKET_NAME,
+        Key: key,
+        Body: buffer,
+        ContentType: contentType,
+      }),
+    );
+  }
+
   // ── S3 deletion helpers ───────────────────────────────────────────────────
 
   async deleteAudioFile(key: string): Promise<void> {

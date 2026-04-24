@@ -1,0 +1,138 @@
+diff --git a/ios/Toolbar/RouterToolbarHostView.swift b/ios/Toolbar/RouterToolbarHostView.swift
+index 3b2a9ad76dc98966a508553a36606477c99a9bd8..ec4ad6c42ac2d81d1aa1edb630606be12f9aa1e6 100644
+--- a/ios/Toolbar/RouterToolbarHostView.swift
++++ b/ios/Toolbar/RouterToolbarHostView.swift
+@@ -80,14 +80,15 @@ class RouterToolbarHostView: RouterViewWithLogger, LinkPreviewMenuUpdatable {
+             )
+             // Otherwise, the menu items will be reversed in the toolbar
+             item.preferredMenuElementOrder = .fixed
+-            if #available(iOS 26.0, *) {
+-              if let hidesSharedBackground = menu.hidesSharedBackground {
+-                item.hidesSharedBackground = hidesSharedBackground
+-              }
+-              if let sharesBackground = menu.sharesBackground {
+-                item.sharesBackground = sharesBackground
+-              }
+-            }
++            // hidesSharedBackground/sharesBackground require iOS 26 SDK (Xcode 16.3+)
++            // if #available(iOS 26.0, *) {
++            //   if let hidesSharedBackground = menu.hidesSharedBackground {
++            //     item.hidesSharedBackground = hidesSharedBackground
++            //   }
++            //   if let sharesBackground = menu.sharesBackground {
++            //     item.sharesBackground = sharesBackground
++            //   }
++            // }
+             if let titleStyle = menu.titleStyle {
+               RouterFontUtils.setTitleStyle(fromConfig: titleStyle, for: item)
+             }
+diff --git a/ios/Toolbar/RouterToolbarItemView.swift b/ios/Toolbar/RouterToolbarItemView.swift
+index 47936de3f227a6a71972e557c93b036b0d876c0b..8ce95c95bfb4c9138ce4f0018ec20d2e6a5b25b3 100644
+--- a/ios/Toolbar/RouterToolbarItemView.swift
++++ b/ios/Toolbar/RouterToolbarItemView.swift
+@@ -93,27 +93,12 @@ class RouterToolbarItemView: RouterViewWithLogger {
+     } else if type == .fixedSpacer {
+       item = UIBarButtonItem(barButtonSystemItem: .fixedSpace, target: nil, action: nil)
+     } else if type == .searchBar {
+-      guard #available(iOS 26.0, *), let controller = self.host?.findViewController() else {
+-        // Check for iOS 26, should already be guarded by the JS side, so this warning will only fire if controller is nil
+-        logger?.warn(
+-          "[expo-router] navigationItem.searchBarPlacementBarButtonItem not available. This is most likely a bug in expo-router."
+-        )
+-        currentBarButtonItem = nil
+-        return
+-      }
+-      guard let navController = controller.navigationController else {
+-        currentBarButtonItem = nil
+-        return
+-      }
+-      guard navController.isNavigationBarHidden == false else {
+-        logger?.warn(
+-          "[expo-router] Toolbar.SearchBarPreferredSlot should only be used when stack header is shown."
+-        )
+-        currentBarButtonItem = nil
+-        return
+-      }
+-
+-      item = controller.navigationItem.searchBarPlacementBarButtonItem
++      // searchBarPlacementBarButtonItem requires iOS 26 SDK (Xcode 16.3+); not available in stable Xcode 16.2
++      logger?.warn(
++        "[expo-router] navigationItem.searchBarPlacementBarButtonItem not available. This is most likely a bug in expo-router."
++      )
++      currentBarButtonItem = nil
++      return
+     } else {
+       // Normal button - apply content properties during initial creation
+       applyContentProperties(to: item)
+@@ -160,43 +145,22 @@ class RouterToolbarItemView: RouterViewWithLogger {
+   }
+ 
+   private func applyCommonProperties(to item: UIBarButtonItem) {
+-    if #available(iOS 26.0, *) {
+-      item.hidesSharedBackground = hidesSharedBackground
+-      item.sharesBackground = sharesBackground
+-    }
++    // hidesSharedBackground/sharesBackground require iOS 26 SDK (Xcode 16.3+)
++    // if #available(iOS 26.0, *) {
++    //   item.hidesSharedBackground = hidesSharedBackground
++    //   item.sharesBackground = sharesBackground
++    // }
+     item.style = barButtonItemStyle ?? .plain
+     item.width = width.map { CGFloat($0) } ?? 0
+     item.isSelected = selected
+     item.accessibilityLabel = routerAccessibilityLabel
+     item.accessibilityHint = routerAccessibilityHint
+     item.isEnabled = !disabled
+-    if #available(iOS 26.0, *) {
+-      if let badgeConfig = badgeConfiguration {
+-        var badge = UIBarButtonItem.Badge.indicator()
+-        if let value = badgeConfig.value {
+-          badge = .string(value)
+-        }
+-        if let backgroundColor = badgeConfig.backgroundColor {
+-          badge.backgroundColor = backgroundColor
+-        }
+-        if let foregroundColor = badgeConfig.color {
+-          badge.foregroundColor = foregroundColor
+-        }
+-        if badgeConfig.fontFamily != nil || badgeConfig.fontSize != nil
+-          || badgeConfig.fontWeight != nil {
+-          let font = RouterFontUtils.convertTitleStyleToFont(
+-            TitleStyle(
+-              fontFamily: badgeConfig.fontFamily,
+-              fontSize: badgeConfig.fontSize,
+-              fontWeight: badgeConfig.fontWeight
+-            ))
+-          badge.font = font
+-        }
+-        item.badge = badge
+-      } else {
+-        item.badge = nil
+-      }
+-    }
++    // UIBarButtonItem.Badge requires iOS 26 SDK (Xcode 16.3+)
++    // if #available(iOS 26.0, *) {
++    //   if let badgeConfig = badgeConfiguration { ... item.badge = badge }
++    //   else { item.badge = nil }
++    // }
+   }
+ 
+   required init(appContext: AppContext? = nil) {
+diff --git a/ios/Toolbar/RouterToolbarModule.swift b/ios/Toolbar/RouterToolbarModule.swift
+index 1bee03ce614c6169c56ff74cdf89128923c500f5..e7898e3146e1690874c7ac91142def689609da2b 100644
+--- a/ios/Toolbar/RouterToolbarModule.swift
++++ b/ios/Toolbar/RouterToolbarModule.swift
+@@ -94,11 +94,8 @@ enum BarItemStyle: String, Enumerable {
+     case .plain:
+       return .plain
+     case .prominent:
+-      if #available(iOS 26.0, *) {
+-        return .prominent
+-      } else {
+-        return .done
+-      }
++      // UIBarButtonItem.Style.prominent requires iOS 26 SDK (Xcode 16.3+)
++      return .done
+     }
+   }
+ }

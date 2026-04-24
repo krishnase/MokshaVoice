@@ -3,18 +3,16 @@ import type { SessionWithMeta, SessionStatus } from '@mokshavoice/shared-types';
 
 interface Props {
   session: SessionWithMeta;
-  onPress: (id: string) => void;
+  dreamNumber: number;
+  onPress: (id: string, title: string) => void;
 }
 
-function timeAgo(isoDate: string): string {
-  const diff = Date.now() - new Date(isoDate).getTime();
-  const mins = Math.floor(diff / 60_000);
-  if (mins < 1) return 'just now';
-  if (mins < 60) return `${mins}m ago`;
-  const hrs = Math.floor(mins / 60);
-  if (hrs < 24) return `${hrs}h ago`;
-  const days = Math.floor(hrs / 24);
-  return `${days}d ago`;
+function formatDate(isoDate: string): string {
+  return new Date(isoDate).toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+  });
 }
 
 function lastMessagePreview(session: SessionWithMeta): string {
@@ -35,13 +33,14 @@ const STATUS_LABELS: Record<SessionStatus, string> = {
   COMPLETED: 'Completed',
 };
 
-export function SessionCard({ session, onPress }: Props) {
+export function SessionCard({ session, dreamNumber, onPress }: Props) {
   const statusColor = STATUS_COLORS[session.status];
+  const title = `Dream ${dreamNumber} on ${formatDate(session.createdAt)}`;
 
   return (
     <TouchableOpacity
       style={styles.card}
-      onPress={() => onPress(session.id)}
+      onPress={() => onPress(session.id, title)}
       activeOpacity={0.7}
     >
       <View style={styles.header}>
@@ -49,8 +48,9 @@ export function SessionCard({ session, onPress }: Props) {
         <Text style={[styles.statusLabel, { color: statusColor }]}>
           {STATUS_LABELS[session.status]}
         </Text>
-        <Text style={styles.time}>{timeAgo(session.createdAt)}</Text>
       </View>
+
+      <Text style={styles.title}>{title}</Text>
 
       <Text style={styles.preview} numberOfLines={2}>
         {lastMessagePreview(session)}
@@ -96,10 +96,15 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#666',
   },
+  title: {
+    color: '#FFF',
+    fontSize: 15,
+    fontWeight: '600',
+  },
   preview: {
-    color: '#CCC',
-    fontSize: 14,
-    lineHeight: 20,
+    color: '#888',
+    fontSize: 13,
+    lineHeight: 19,
   },
   footer: {
     flexDirection: 'row',

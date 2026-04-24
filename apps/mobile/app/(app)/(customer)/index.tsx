@@ -12,10 +12,13 @@ import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { SessionCard } from '@/src/components/SessionCard';
 import { useSessions } from '@/src/hooks/useSessions';
+import { useAuthStore } from '@/src/stores/authStore';
 import type { SessionWithMeta } from '@mokshavoice/shared-types';
 
 export default function DreamList() {
   const router = useRouter();
+  const { user } = useAuthStore();
+  const isNonCustomer = user?.role !== 'CUSTOMER';
   const {
     data,
     fetchNextPage,
@@ -32,13 +35,14 @@ export default function DreamList() {
   );
 
   const handlePress = useCallback(
-    (id: string) => router.push(`/(app)/(customer)/session/${id}`),
+    (id: string, title: string) =>
+      router.push(`/(app)/(customer)/session/${id}?sessionTitle=${encodeURIComponent(title)}`),
     [router],
   );
 
   const renderItem = useCallback(
-    ({ item }: { item: SessionWithMeta }) => (
-      <SessionCard session={item} onPress={handlePress} />
+    ({ item, index }: { item: SessionWithMeta; index: number }) => (
+      <SessionCard session={item} dreamNumber={index + 1} onPress={handlePress} />
     ),
     [handlePress],
   );
@@ -68,13 +72,20 @@ export default function DreamList() {
   return (
     <SafeAreaView style={styles.safe}>
       <View style={styles.header}>
-        <Text style={styles.title}>My Dreams</Text>
-        <TouchableOpacity
-          style={styles.notifBtn}
-          onPress={() => router.push('/(app)/notifications')}
-        >
-          <Text style={styles.notifIcon}>🔔</Text>
-        </TouchableOpacity>
+        {isNonCustomer ? (
+          <TouchableOpacity onPress={() => router.push('/(app)/mode-select')} style={styles.backBtn}>
+            <Text style={styles.backText}>← Mode</Text>
+          </TouchableOpacity>
+        ) : null}
+        <Text style={[styles.title, isNonCustomer && styles.titleSmall]}>My Dreams</Text>
+        {!isNonCustomer ? (
+          <TouchableOpacity
+            style={styles.notifBtn}
+            onPress={() => router.push('/(app)/notifications')}
+          >
+            <Text style={styles.notifIcon}>🔔</Text>
+          </TouchableOpacity>
+        ) : <View style={styles.notifBtn} />}
       </View>
 
       {isLoading ? (
@@ -101,24 +112,26 @@ export default function DreamList() {
         />
       )}
 
-      {/* Bottom tab bar */}
-      <View style={styles.tabBar}>
-        <View style={styles.tabActive}>
-          <Text style={styles.tabIconActive}>🌙</Text>
-          <Text style={styles.tabLabelActive}>Dreams</Text>
+      {/* Bottom tab bar — customers only */}
+      {!isNonCustomer && (
+        <View style={styles.tabBar}>
+          <View style={styles.tabActive}>
+            <Text style={styles.tabIconActive}>🌙</Text>
+            <Text style={styles.tabLabelActive}>Dreams</Text>
+          </View>
+          <TouchableOpacity
+            style={styles.tab}
+            onPress={() => router.push('/(app)/(customer)/profile')}
+          >
+            <Text style={styles.tabIcon}>👤</Text>
+            <Text style={styles.tabLabel}>Profile</Text>
+          </TouchableOpacity>
         </View>
-        <TouchableOpacity
-          style={styles.tab}
-          onPress={() => router.push('/(app)/(customer)/profile')}
-        >
-          <Text style={styles.tabIcon}>👤</Text>
-          <Text style={styles.tabLabel}>Profile</Text>
-        </TouchableOpacity>
-      </View>
+      )}
 
-      {/* FAB */}
+      {/* FAB — record new dream */}
       <TouchableOpacity
-        style={styles.fab}
+        style={[styles.fab, isNonCustomer && styles.fabNonCustomer]}
         onPress={() => router.push('/(app)/(customer)/submit')}
         activeOpacity={0.8}
       >
@@ -137,8 +150,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 16,
   },
-  title: { color: '#FFF', fontSize: 28, fontWeight: '700' },
-  notifBtn: { padding: 4 },
+  backBtn: { minWidth: 60 },
+  backText: { color: '#9B5DE5', fontSize: 15 },
+  title: { color: '#FFF', fontSize: 28, fontWeight: '700', flex: 1, textAlign: 'center' },
+  titleSmall: { fontSize: 20, textAlign: 'center' },
+  notifBtn: { minWidth: 60, alignItems: 'flex-end', padding: 4 },
   notifIcon: { fontSize: 22 },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   list: { paddingBottom: 100 },
@@ -161,6 +177,7 @@ const styles = StyleSheet.create({
   tabIconActive: { fontSize: 22 },
   tabLabel: { color: '#555', fontSize: 11 },
   tabLabelActive: { color: '#9B5DE5', fontSize: 11, fontWeight: '600' },
+  fabNonCustomer: { bottom: 24 },
   fab: {
     position: 'absolute',
     right: 20,

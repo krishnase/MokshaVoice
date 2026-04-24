@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useState } from 'react';
 import {
   View,
   Text,
@@ -12,11 +12,8 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { FirebaseRecaptchaVerifierModal } from 'expo-firebase-recaptcha';
-import { signInWithPhoneNumber } from 'firebase/auth';
-import { auth, firebaseConfig } from '@/src/lib/firebase';
+import auth from '@react-native-firebase/auth';
 import { phoneAuthStore } from '@/src/stores/phoneAuthStore';
-import { api } from '@/src/lib/api';
 
 // Country code options — extend as needed
 const COUNTRY_CODES = [
@@ -28,8 +25,6 @@ const COUNTRY_CODES = [
 
 export default function LoginScreen() {
   const router = useRouter();
-  const recaptchaRef = useRef<FirebaseRecaptchaVerifierModal>(null);
-
   const [countryCode, setCountryCode] = useState('+1');
   const [phoneNumber, setPhoneNumber] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -46,15 +41,8 @@ export default function LoginScreen() {
 
     setIsLoading(true);
     try {
-      // Backend rate-limit check first
-      await api.post('/v1/auth/send-otp', { phone: fullPhone });
-
       // Trigger Firebase phone auth (sends SMS)
-      const confirmation = await signInWithPhoneNumber(
-        auth,
-        fullPhone,
-        recaptchaRef.current!,
-      );
+      const confirmation = await auth().signInWithPhoneNumber(fullPhone);
 
       phoneAuthStore.setConfirmation(confirmation, fullPhone);
       router.push('/(auth)/verify');
@@ -81,12 +69,6 @@ export default function LoginScreen() {
 
   return (
     <SafeAreaView style={styles.safe}>
-      <FirebaseRecaptchaVerifierModal
-        ref={recaptchaRef}
-        firebaseConfig={firebaseConfig}
-        attemptInvisibleVerification
-      />
-
       <KeyboardAvoidingView
         style={styles.flex}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}

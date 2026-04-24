@@ -1,9 +1,7 @@
 import { create } from 'zustand';
-import { MMKV } from 'react-native-mmkv';
 import Purchases from 'react-native-purchases';
+import { authStorage } from '../lib/storage';
 import type { UserProfile } from '@mokshavoice/shared-types';
-
-const storage = new MMKV({ id: 'auth' });
 
 interface AuthState {
   user: UserProfile | null;
@@ -18,18 +16,18 @@ interface AuthState {
 
 export const useAuthStore = create<AuthState>((set) => ({
   user: null,
-  accessToken: storage.getString('accessToken') ?? null,
-  refreshToken: storage.getString('refreshToken') ?? null,
+  accessToken: null,
+  refreshToken: null,
   isHydrated: false,
 
   setTokens(accessToken, refreshToken) {
-    storage.set('accessToken', accessToken);
-    storage.set('refreshToken', refreshToken);
+    authStorage.set('accessToken', accessToken);
+    authStorage.set('refreshToken', refreshToken);
     set({ accessToken, refreshToken });
   },
 
   setUser(user) {
-    storage.set('user', JSON.stringify(user));
+    authStorage.set('user', JSON.stringify(user));
     set({ user });
   },
 
@@ -39,16 +37,17 @@ export const useAuthStore = create<AuthState>((set) => ({
     } catch {
       // ignore RC errors on logout
     }
-    storage.delete('accessToken');
-    storage.delete('refreshToken');
-    storage.delete('user');
+    authStorage.delete('accessToken');
+    authStorage.delete('refreshToken');
+    authStorage.delete('user');
     set({ user: null, accessToken: null, refreshToken: null });
   },
 
   hydrate() {
-    // Idempotent — safe to call from multiple layout components
-    const userJson = storage.getString('user');
+    const userJson = authStorage.getString('user');
     const user = userJson ? (JSON.parse(userJson) as UserProfile) : null;
-    set({ user, isHydrated: true });
+    const accessToken = authStorage.getString('accessToken') ?? null;
+    const refreshToken = authStorage.getString('refreshToken') ?? null;
+    set({ user, accessToken, refreshToken, isHydrated: true });
   },
 }));

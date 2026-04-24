@@ -14,4 +14,8 @@ config.resolver.nodeModulesPaths = [
   path.resolve(workspaceRoot, 'node_modules'),
 ];
 
+// Fix Firebase ESM/CJS resolution conflict with Metro + Hermes
+config.resolver.sourceExts = ['jsx', 'js', 'ts', 'tsx', 'cjs', 'json'];
+config.resolver.unstable_enablePackageExports = false;
+
 module.exports = config;

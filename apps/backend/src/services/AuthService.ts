@@ -1,12 +1,13 @@
-import * as admin from 'firebase-admin';
+import { initializeApp, getApps, cert } from 'firebase-admin/app';
+import { getAuth, type DecodedIdToken } from 'firebase-admin/auth';
 import { prisma } from '../lib/prisma.js';
 import { env } from '../lib/env.js';
 import { redis } from '../lib/redis.js';
 import type { Role } from '@mokshavoice/shared-types';
 
-if (!admin.apps.length) {
-  admin.initializeApp({
-    credential: admin.credential.cert({
+if (!getApps().length) {
+  initializeApp({
+    credential: cert({
       projectId: env.FIREBASE_PROJECT_ID,
       clientEmail: env.FIREBASE_CLIENT_EMAIL,
       privateKey: env.FIREBASE_PRIVATE_KEY.replace(/\\n/g, '\n'),
@@ -60,9 +61,9 @@ export class AuthService {
     fastifyJwt: { sign: (payload: object, opts?: object) => string },
   ): Promise<TokenPair & { user: Awaited<ReturnType<typeof this.getOrCreateUser>> }> {
     // 1. Verify the Firebase ID token — this is the authoritative OTP check
-    let decoded: admin.auth.DecodedIdToken;
+    let decoded: DecodedIdToken;
     try {
-      decoded = await admin.auth().verifyIdToken(firebaseIdToken);
+      decoded = await getAuth().verifyIdToken(firebaseIdToken);
     } catch {
       throw Object.assign(new Error('Invalid or expired Firebase ID token'), { statusCode: 401 });
     }

@@ -1,4 +1,4 @@
-import { useRef, useCallback } from 'react';
+import { useRef, useCallback, useEffect } from 'react';
 import {
   View,
   Text,
@@ -39,6 +39,17 @@ export function HoldToRecord({
   const dx = useRef(0);
   const isCancelling = useRef(false);
 
+  // Refs so PanResponder callbacks always see latest prop values
+  const isDisabledRef = useRef(isDisabled);
+  const onHoldStartRef = useRef(onHoldStart);
+  const onHoldEndRef = useRef(onHoldEnd);
+  const onCancelRef = useRef(onCancel);
+
+  useEffect(() => { isDisabledRef.current = isDisabled; }, [isDisabled]);
+  useEffect(() => { onHoldStartRef.current = onHoldStart; }, [onHoldStart]);
+  useEffect(() => { onHoldEndRef.current = onHoldEnd; }, [onHoldEnd]);
+  useEffect(() => { onCancelRef.current = onCancel; }, [onCancel]);
+
   const animatePressIn = useCallback(() => {
     Animated.spring(scale, { toValue: 0.88, useNativeDriver: true }).start();
   }, []);
@@ -49,14 +60,14 @@ export function HoldToRecord({
 
   const panResponder = useRef(
     PanResponder.create({
-      onStartShouldSetPanResponder: () => !isDisabled,
-      onMoveShouldSetPanResponder: () => !isDisabled,
+      onStartShouldSetPanResponder: () => !isDisabledRef.current,
+      onMoveShouldSetPanResponder: () => !isDisabledRef.current,
 
       onPanResponderGrant: () => {
         dx.current = 0;
         isCancelling.current = false;
         animatePressIn();
-        onHoldStart();
+        onHoldStartRef.current();
       },
 
       onPanResponderMove: (_, gestureState) => {
@@ -67,16 +78,16 @@ export function HoldToRecord({
       onPanResponderRelease: () => {
         animatePressOut();
         if (isCancelling.current) {
-          onCancel();
+          onCancelRef.current();
         } else {
-          onHoldEnd();
+          onHoldEndRef.current();
         }
         isCancelling.current = false;
       },
 
       onPanResponderTerminate: () => {
         animatePressOut();
-        onCancel();
+        onCancelRef.current();
         isCancelling.current = false;
       },
     }),

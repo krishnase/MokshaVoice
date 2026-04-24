@@ -12,9 +12,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { signInWithPhoneNumber } from 'firebase/auth';
-import { FirebaseRecaptchaVerifierModal } from 'expo-firebase-recaptcha';
-import { auth, firebaseConfig } from '@/src/lib/firebase';
+import auth from '@react-native-firebase/auth';
 import { phoneAuthStore } from '@/src/stores/phoneAuthStore';
 import { useAuthStore } from '@/src/stores/authStore';
 import { useSubscriptionStore } from '@/src/stores/subscriptionStore';
@@ -26,7 +24,6 @@ const RESEND_COUNTDOWN_S = 60;
 
 export default function VerifyScreen() {
   const router = useRouter();
-  const recaptchaRef = useRef<FirebaseRecaptchaVerifierModal>(null);
   const inputRefs = useRef<Array<TextInput | null>>(Array(OTP_LENGTH).fill(null));
   const { setTokens, setUser } = useAuthStore();
   const { setSubscription } = useSubscriptionStore();
@@ -154,8 +151,7 @@ export default function VerifyScreen() {
 
     setIsResending(true);
     try {
-      await api.post('/v1/auth/send-otp', { phone });
-      const newConfirmation = await signInWithPhoneNumber(auth, phone, recaptchaRef.current!);
+      const newConfirmation = await auth().signInWithPhoneNumber(phone);
       phoneAuthStore.setConfirmation(newConfirmation, phone);
       setOtp(Array(OTP_LENGTH).fill(''));
       setCountdown(RESEND_COUNTDOWN_S);
@@ -170,12 +166,6 @@ export default function VerifyScreen() {
 
   return (
     <SafeAreaView style={styles.safe}>
-      <FirebaseRecaptchaVerifierModal
-        ref={recaptchaRef}
-        firebaseConfig={firebaseConfig}
-        attemptInvisibleVerification
-      />
-
       <KeyboardAvoidingView
         style={styles.flex}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -212,7 +202,6 @@ export default function VerifyScreen() {
                 ]}
                 value={digit}
                 onChangeText={(v) => {
-                  // Support paste of full code into any cell
                   if (v.length === OTP_LENGTH) {
                     handlePaste(v);
                   } else {
@@ -231,7 +220,7 @@ export default function VerifyScreen() {
             ))}
           </View>
 
-          {/* Verify button (visible if auto-submit hasn't fired) */}
+          {/* Verify button */}
           {isComplete && (
             <TouchableOpacity
               style={[styles.verifyButton, isVerifying && styles.verifyButtonLoading]}

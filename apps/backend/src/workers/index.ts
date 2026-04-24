@@ -3,6 +3,7 @@ import { redis } from '../lib/redis.js';
 import { prisma } from '../lib/prisma.js';
 import { QuotaService } from '../services/QuotaService.js';
 import { startAudioCleanupWorker } from './audioCleanup.js';
+import { startAutoAssignWorker, runAutoAssignSweep } from './autoAssign.js';
 
 const QUOTA_RESET_QUEUE = 'quota-reset';
 
@@ -48,6 +49,11 @@ export async function startWorkers(): Promise<void> {
   );
 
   startAudioCleanupWorker();
+  startAutoAssignWorker();
+
+  // Sweep every 2 minutes as a safety net for any sessions that slipped through
+  void runAutoAssignSweep();
+  setInterval(() => void runAutoAssignSweep(), 2 * 60 * 1000);
 
   console.info('BullMQ workers started');
 }

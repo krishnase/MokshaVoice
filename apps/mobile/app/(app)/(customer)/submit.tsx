@@ -4,101 +4,170 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
+  Pressable,
   ScrollView,
   Alert,
   KeyboardAvoidingView,
   Platform,
+  ActivityIndicator,
   StyleSheet,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { HoldToRecord } from '@/src/components/HoldToRecord';
+import { useQueryClient } from '@tanstack/react-query';
+import { Audio } from 'expo-av';
 import { QuotaMeter } from '@/src/components/QuotaMeter';
-import { useCreateSession } from '@/src/hooks/useSessions';
-import { useAudioUpload } from '@/src/hooks/useAudioUpload';
 import { useSubscriptionStore } from '@/src/stores/subscriptionStore';
+import { useAuthStore } from '@/src/stores/authStore';
 import { api } from '@/src/lib/api';
 
-type Mode = 'idle' | 'voice' | 'text';
+const MAX_TEXT = 1000;
+
+type Clip = { id: string; uri: string; durationS: number };
+type Note = { id: string; value: string };
+
+type SubmitResponse = {
+  session: { id: string };
+  quota: { allowed: boolean; status: string; used: number; limit: number };
+};
+
+let _idCounter = 0;
+function nextId() { return String(++_idCounter); }
 
 export default function SubmitDream() {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const { subscription } = useSubscriptionStore();
-  const createSession = useCreateSession();
-  const {
-    isRecording,
-    recordingDurationMs,
-    isUploading,
-    startRecording,
-    stopAndUpload,
-    cancelRecording,
-  } = useAudioUpload();
 
-  const [mode, setMode] = useState<Mode>('idle');
-  const [textInput, setTextInput] = useState('');
+  const recordingRef = useRef<Audio.Recording | null>(null);
+  const startTimeRef = useRef<number>(0);
+  const isOperatingRef = useRef(false);
+
+  const [isRecording, setIsRecording] = useState(false);
+  const [clips, setClips] = useState<Clip[]>([]);
+  // Start with one empty note so the text section is always visible
+  const [notes, setNotes] = useState<Note[]>([{ id: nextId(), value: '' }]);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const sessionIdRef = useRef<string | null>(null);
+  const [focusedNoteId, setFocusedNoteId] = useState<string | null>(null);
 
-  const handleHoldStart = async () => {
-    setMode('voice');
-    await startRecording();
-  };
+  const validNotes = notes.filter((n) => n.value.trim().length > 0);
+  const canSubmit = clips.length > 0 || validNotes.length > 0;
+  const lastNoteHasContent = (notes[notes.length - 1]?.value.trim().length ?? 0) > 0;
 
-  const handleHoldEnd = async () => {
-    if (!isRecording) return;
-    setIsSubmitting(true);
+  // ── Recording ──────────────────────────────────────────────────────────────
+
+  async function startRecording() {
+    if (isRecording || isOperatingRef.current) return;
+    isOperatingRef.current = true;
     try {
-      // Create session while recording is still running, then stop+upload
-      const { session } = await createSession.mutateAsync();
-      sessionIdRef.current = session.id;
-
-      const uploaded = await stopAndUpload(session.id, true);
-      if (!uploaded) {
-        setIsSubmitting(false);
-        setMode('idle');
+      const { granted } = await Audio.requestPermissionsAsync();
+      if (!granted) {
+        Alert.alert('Permission required', 'Microphone access is needed to record your dream.');
         return;
       }
-
-      await api.post(`/v1/sessions/${session.id}/messages`, {
-        type: 'VOICE',
-        messageId: uploaded.messageId,
-        audioKey: uploaded.key,
-        audioDurationS: uploaded.audioDurationS,
-        isDreamSubmission: true,
-      });
-
-      router.replace(`/(app)/(customer)/session/${session.id}`);
+      await Audio.setAudioModeAsync({ allowsRecordingIOS: true, playsInSilentModeIOS: true });
+      const { recording } = await Audio.Recording.createAsync(
+        Audio.RecordingOptionsPresets.HIGH_QUALITY,
+      );
+      recordingRef.current = recording;
+      startTimeRef.current = Date.now();
+      setIsRecording(true);
     } catch (err: unknown) {
       const e = err as { message?: string };
-      Alert.alert('Submission failed', e.message ?? 'Please try again.');
-      setIsSubmitting(false);
-      setMode('idle');
+      Alert.alert('Recording error', e.message ?? 'Could not start recording.');
+    } finally {
+      isOperatingRef.current = false;
     }
-  };
+  }
 
-  const handleCancel = async () => {
-    await cancelRecording();
-    setMode('idle');
-  };
+  async function stopRecording() {
+    if (!recordingRef.current || !isRecording || isOperatingRef.current) return;
+    isOperatingRef.current = true;
+    setIsRecording(false);
+    const rec = recordingRef.current;
+    recordingRef.current = null;
+    try {
+      await rec.stopAndUnloadAsync();
+      await Audio.setAudioModeAsync({ allowsRecordingIOS: false });
+      const uri = rec.getURI();
+      const durationS = Math.round((Date.now() - startTimeRef.current) / 1000);
+      if (uri && durationS >= 1) {
+        setClips((prev) => [...prev, { id: nextId(), uri, durationS }]);
+      }
+    } catch (err: unknown) {
+      const e = err as { message?: string };
+      Alert.alert('Recording error', e.message ?? 'Could not save recording.');
+    } finally {
+      isOperatingRef.current = false;
+    }
+  }
 
-  const handleTextSubmit = async () => {
-    if (!textInput.trim()) return;
+  function removeClip(id: string) {
+    setClips((prev) => prev.filter((c) => c.id !== id));
+  }
+
+  // ── Notes ─────────────────────────────────────────────────────────────────
+
+  function updateNote(id: string, value: string) {
+    setNotes((prev) =>
+      prev.map((n) => (n.id === id ? { ...n, value: value.slice(0, MAX_TEXT) } : n)),
+    );
+  }
+
+  function removeNote(id: string) {
+    setNotes((prev) => {
+      const next = prev.filter((n) => n.id !== id);
+      // Always keep at least one note input
+      return next.length > 0 ? next : [{ id: nextId(), value: '' }];
+    });
+  }
+
+  function addNote() {
+    setNotes((prev) => [...prev, { id: nextId(), value: '' }]);
+  }
+
+  // ── Submit ────────────────────────────────────────────────────────────────
+
+  async function handleSubmit() {
+    if (!canSubmit || isSubmitting) return;
     setIsSubmitting(true);
     try {
-      const { session } = await createSession.mutateAsync();
-      await api.post(`/v1/sessions/${session.id}/messages`, {
-        type: 'TEXT',
-        content: textInput.trim(),
-      });
+      const formData = new FormData();
+
+      // Append clips in order — durationS immediately after each audio so
+      // backend can zip them by index
+      for (const clip of clips) {
+        formData.append('audio', {
+          uri: clip.uri,
+          type: 'audio/m4a',
+          name: `recording-${clip.id}.m4a`,
+        } as unknown as Blob);
+        formData.append('durationS', String(clip.durationS));
+      }
+
+      for (const note of validNotes) {
+        formData.append('text', note.value.trim());
+      }
+      // Also flush any unsaved text still in an input box
+      for (const note of notes) {
+        if (!validNotes.find((n) => n.id === note.id) && note.value.trim()) {
+          formData.append('text', note.value.trim());
+        }
+      }
+
+      const { session } = await api.postForm<SubmitResponse>('/v1/dreams', formData);
+      // Refresh home screen so the new session appears immediately
+      void queryClient.invalidateQueries({ queryKey: ['sessions'] });
+      void queryClient.invalidateQueries({ queryKey: ['subscription'] });
       router.replace(`/(app)/(customer)/session/${session.id}`);
     } catch (err: unknown) {
       const e = err as { message?: string };
       Alert.alert('Submission failed', e.message ?? 'Please try again.');
       setIsSubmitting(false);
     }
-  };
+  }
 
-  const isDisabled = isSubmitting || isUploading;
+  // ── Render ────────────────────────────────────────────────────────────────
 
   return (
     <SafeAreaView style={styles.safe}>
@@ -110,7 +179,7 @@ export default function SubmitDream() {
           <TouchableOpacity onPress={() => router.back()}>
             <Text style={styles.backBtn}>← Back</Text>
           </TouchableOpacity>
-          <Text style={styles.heading}>New Dream</Text>
+          <Text style={styles.heading}>Share Your Dream</Text>
           <View style={styles.placeholder} />
         </View>
 
@@ -126,59 +195,131 @@ export default function SubmitDream() {
             />
           )}
 
+          <Text style={styles.subtitle}>Record and describe your dream</Text>
+
+          {/* ── Voice Recordings ─────────────────────────────────────────── */}
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Record your dream</Text>
-            <Text style={styles.sectionSub}>
-              Hold the button and speak. Release when done.
+            <Text style={styles.sectionLabel}>
+              Voice Recordings{clips.length > 0 ? ` (${clips.length})` : ' (Optional)'}
             </Text>
+
+            {/* Saved clips list */}
+            {clips.map((clip, i) => (
+              <View key={clip.id} style={styles.clipRow}>
+                <Text style={styles.clipIcon}>🎙️</Text>
+                <Text style={styles.clipText}>
+                  Recording {i + 1} — {clip.durationS}s
+                </Text>
+                <TouchableOpacity
+                  onPress={() => removeClip(clip.id)}
+                  style={styles.deleteBtn}
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                >
+                  <Text style={styles.deleteText}>✕</Text>
+                </TouchableOpacity>
+              </View>
+            ))}
+
+            {/* Hold-to-record button */}
             <View style={styles.recordArea}>
-              <HoldToRecord
-                isRecording={isRecording}
-                isDisabled={isDisabled || mode === 'text'}
-                onHoldStart={handleHoldStart}
-                onHoldEnd={handleHoldEnd}
-                onCancel={handleCancel}
-                durationMs={recordingDurationMs}
-              />
-              {isUploading && (
-                <Text style={styles.uploadingText}>Uploading…</Text>
-              )}
+              <Pressable
+                onPressIn={startRecording}
+                onPressOut={stopRecording}
+                disabled={isSubmitting}
+                style={({ pressed }) => [
+                  styles.recordButton,
+                  pressed && !isRecording && styles.recordButtonPressed,
+                  isRecording && styles.recordButtonRecording,
+                ]}
+              >
+                {isRecording ? (
+                  <View style={styles.recordingDot} />
+                ) : (
+                  <Text style={styles.micIcon}>🎙️</Text>
+                )}
+              </Pressable>
+              <Text style={styles.recordHint}>
+                {isRecording
+                  ? 'Recording… Release to save'
+                  : clips.length > 0
+                  ? 'Hold to add another recording'
+                  : 'Hold to Record'}
+              </Text>
             </View>
           </View>
 
-          <View style={styles.dividerRow}>
-            <View style={styles.divider} />
-            <Text style={styles.orText}>or type it</Text>
-            <View style={styles.divider} />
-          </View>
-
+          {/* ── Text Notes ───────────────────────────────────────────────── */}
           <View style={styles.section}>
-            <TextInput
-              style={[styles.textArea, mode === 'voice' && styles.textAreaDisabled]}
-              placeholder="Describe your dream in words…"
-              placeholderTextColor="#555"
-              multiline
-              value={textInput}
-              onChangeText={(t) => {
-                setTextInput(t);
-                if (t.length > 0) setMode('text');
-                else if (!isRecording) setMode('idle');
-              }}
-              editable={!isDisabled && !isRecording}
-            />
-            {mode === 'text' && textInput.trim().length > 0 && (
-              <TouchableOpacity
-                style={[styles.submitBtn, isDisabled && styles.submitBtnDisabled]}
-                onPress={handleTextSubmit}
-                disabled={isDisabled}
-              >
-                <Text style={styles.submitBtnText}>
-                  {isSubmitting ? 'Submitting…' : 'Submit Dream'}
+            <Text style={styles.sectionLabel}>
+              Dream Notes{validNotes.length > 0 ? ` (${validNotes.length})` : ' (Optional)'}
+            </Text>
+
+            {notes.map((note, i) => (
+              <View key={note.id} style={styles.noteBlock}>
+                <View style={styles.noteLabelRow}>
+                  <Text style={styles.noteIndex}>Note {i + 1}</Text>
+                  {notes.length > 1 && (
+                    <TouchableOpacity onPress={() => removeNote(note.id)}>
+                      <Text style={styles.removeNoteText}>Remove</Text>
+                    </TouchableOpacity>
+                  )}
+                </View>
+                <TextInput
+                  style={[
+                    styles.textArea,
+                    focusedNoteId === note.id && styles.textAreaFocused,
+                  ]}
+                  placeholder="Describe your dream… What did you see, feel, or experience?"
+                  placeholderTextColor="#555"
+                  multiline
+                  numberOfLines={4}
+                  value={note.value}
+                  onChangeText={(t) => updateNote(note.id, t)}
+                  onFocus={() => setFocusedNoteId(note.id)}
+                  onBlur={() => setFocusedNoteId(null)}
+                  editable={!isSubmitting}
+                  textAlignVertical="top"
+                />
+                <Text style={styles.charCounter}>
+                  {note.value.length}/{MAX_TEXT}
                 </Text>
-              </TouchableOpacity>
-            )}
+              </View>
+            ))}
+
+            <TouchableOpacity
+              style={[styles.addNoteBtn, !lastNoteHasContent && styles.addNoteBtnDisabled]}
+              onPress={addNote}
+              disabled={!lastNoteHasContent || isSubmitting}
+            >
+              <Text
+                style={[
+                  styles.addNoteBtnText,
+                  !lastNoteHasContent && styles.addNoteBtnTextDisabled,
+                ]}
+              >
+                + Add Another Note
+              </Text>
+            </TouchableOpacity>
           </View>
         </ScrollView>
+
+        {/* ── Submit Button ─────────────────────────────────────────────── */}
+        <View style={styles.submitArea}>
+          <TouchableOpacity
+            style={[styles.submitBtn, !canSubmit && styles.submitBtnDisabled]}
+            onPress={handleSubmit}
+            disabled={!canSubmit || isSubmitting}
+          >
+            {isSubmitting ? (
+              <View style={styles.submitRow}>
+                <ActivityIndicator color="#fff" />
+                <Text style={styles.submitBtnText}>  Submitting…</Text>
+              </View>
+            ) : (
+              <Text style={styles.submitBtnText}>Analyze My Dream</Text>
+            )}
+          </TouchableOpacity>
+        </View>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
@@ -194,18 +335,56 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 14,
   },
-  backBtn: { color: '#9B5DE5', fontSize: 15 },
+  backBtn: { color: '#7C3AED', fontSize: 15 },
   heading: { color: '#FFF', fontSize: 18, fontWeight: '700' },
   placeholder: { width: 60 },
-  content: { padding: 20, gap: 24 },
-  section: { gap: 8 },
-  sectionTitle: { color: '#FFF', fontSize: 17, fontWeight: '600' },
-  sectionSub: { color: '#888', fontSize: 13 },
-  recordArea: { alignItems: 'center', paddingVertical: 24, gap: 16 },
-  uploadingText: { color: '#888', fontSize: 13 },
-  dividerRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  divider: { flex: 1, height: 1, backgroundColor: '#222' },
-  orText: { color: '#555', fontSize: 13 },
+  subtitle: { color: '#9CA3AF', fontSize: 14, marginBottom: 4 },
+  content: { padding: 20, gap: 24, paddingBottom: 16 },
+  section: { gap: 12 },
+  sectionLabel: { color: '#D1D5DB', fontSize: 14, fontWeight: '600' },
+
+  // ── Clips ──────────────────────────────────────────────────────────────────
+  clipRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#1A2E1A',
+    borderRadius: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    gap: 10,
+  },
+  clipIcon: { fontSize: 16 },
+  clipText: { flex: 1, color: '#4ADE80', fontSize: 14, fontWeight: '500' },
+  deleteBtn: { padding: 4 },
+  deleteText: { color: '#6B7280', fontSize: 14, fontWeight: '600' },
+
+  // ── Record button ──────────────────────────────────────────────────────────
+  recordArea: { alignItems: 'center', paddingVertical: 12, gap: 10 },
+  recordButton: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: '#1F1F33',
+    borderWidth: 2,
+    borderColor: '#374151',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  recordButtonPressed: { borderColor: '#7C3AED', backgroundColor: '#2D1B69' },
+  recordButtonRecording: { borderColor: '#EF4444', backgroundColor: '#3B0F0F' },
+  recordingDot: { width: 26, height: 26, borderRadius: 13, backgroundColor: '#EF4444' },
+  micIcon: { fontSize: 30 },
+  recordHint: { color: '#6B7280', fontSize: 13 },
+
+  // ── Notes ─────────────────────────────────────────────────────────────────
+  noteBlock: { gap: 6 },
+  noteLabelRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  noteIndex: { color: '#9CA3AF', fontSize: 12, fontWeight: '500' },
+  removeNoteText: { color: '#EF4444', fontSize: 12 },
   textArea: {
     backgroundColor: '#1A1A2E',
     borderRadius: 12,
@@ -213,17 +392,33 @@ const styles = StyleSheet.create({
     color: '#FFF',
     fontSize: 15,
     lineHeight: 22,
-    minHeight: 120,
-    textAlignVertical: 'top',
+    minHeight: 110,
+    borderWidth: 1.5,
+    borderColor: '#374151',
   },
-  textAreaDisabled: { opacity: 0.4 },
-  submitBtn: {
-    backgroundColor: '#9B5DE5',
-    borderRadius: 12,
-    paddingVertical: 14,
+  textAreaFocused: { borderColor: '#7C3AED' },
+  charCounter: { color: '#4B5563', fontSize: 11, textAlign: 'right' },
+
+  addNoteBtn: {
+    borderWidth: 1,
+    borderColor: '#7C3AED',
+    borderRadius: 10,
+    paddingVertical: 10,
     alignItems: 'center',
-    marginTop: 8,
   },
-  submitBtnDisabled: { opacity: 0.5 },
+  addNoteBtnDisabled: { borderColor: '#374151' },
+  addNoteBtnText: { color: '#7C3AED', fontSize: 14, fontWeight: '600' },
+  addNoteBtnTextDisabled: { color: '#4B5563' },
+
+  // ── Submit ─────────────────────────────────────────────────────────────────
+  submitArea: { padding: 20, paddingTop: 8 },
+  submitBtn: {
+    backgroundColor: '#7C3AED',
+    borderRadius: 14,
+    paddingVertical: 16,
+    alignItems: 'center',
+  },
+  submitBtnDisabled: { backgroundColor: '#4B5563' },
   submitBtnText: { color: '#FFF', fontSize: 16, fontWeight: '700' },
+  submitRow: { flexDirection: 'row', alignItems: 'center' },
 });
