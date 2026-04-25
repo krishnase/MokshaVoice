@@ -1,0 +1,45 @@
+{
+  "cli": {
+    "version": ">= 18.0.0",
+    "appVersionSource": "local"
+  },
+  "build": {
+    "preview": {
+      "distribution": "internal",
+      "android": {
+        "buildType": "apk",
+        "gradleCommand": ":app:assembleRelease"
+      },
+      "env": {
+        "EXPO_PUBLIC_API_URL": "https://backend-production-5ea1e.up.railway.app",
+        "EXPO_PUBLIC_RC_IOS_KEY": "test_xTxZlZRcetczxnlWvyqYtwdJpau",
+        "EXPO_PUBLIC_RC_ANDROID_KEY": "test_xTxZlZRcetczxnlWvyqYtwdJpau",
+        "EXPO_PUBLIC_FIREBASE_API_KEY": "AIzaSyAX8qANIOQ21kS0goopoN0UWbPLyJb3N3o",
+        "EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN": "mokshavoice.firebaseapp.com",
+        "EXPO_PUBLIC_FIREBASE_PROJECT_ID": "mokshavoice",
+        "EXPO_PUBLIC_FIREBASE_APP_ID": "1:308947699677:web:01fdcd52cecd3553529834"
+      }
+    },
+    "production": {
+      "android": {
+        "buildType": "app-bundle"
+      },
+      "env": {
+        "EXPO_PUBLIC_API_URL": "https://backend-production-5ea1e.up.railway.app",
+        "EXPO_PUBLIC_RC_IOS_KEY": "test_xTxZlZRcetczxnlWvyqYtwdJpau",
+        "EXPO_PUBLIC_RC_ANDROID_KEY": "test_xTxZlZRcetczxnlWvyqYtwdJpau",
+        "EXPO_PUBLIC_FIREBASE_API_KEY": "AIzaSyAX8qANIOQ21kS0goopoN0UWbPLyJb3N3o",
+        "EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN": "mokshavoice.firebaseapp.com",
+        "EXPO_PUBLIC_FIREBASE_PROJECT_ID": "mokshavoice",
+        "EXPO_PUBLIC_FIREBASE_APP_ID": "1:308947699677:web:01fdcd52cecd3553529834"
+      }
+    }
+  },
+  "submit": {
+    "production": {
+      "android": {
+        "track": "internal"
+      }
+    }
+  }
+}
