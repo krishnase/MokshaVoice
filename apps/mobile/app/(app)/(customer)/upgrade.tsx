@@ -15,6 +15,7 @@ import { useSubscriptionStore } from '@/src/stores/subscriptionStore';
 import { api } from '@/src/lib/api';
 import { QuotaMeter } from '@/src/components/QuotaMeter';
 import type { SubscriptionInfo } from '@mokshavoice/shared-types';
+import { Colors } from '@/src/theme';
 
 export default function UpgradeScreen() {
   const router = useRouter();
@@ -100,7 +101,7 @@ export default function UpgradeScreen() {
       </View>
 
       {offeringsLoading ? (
-        <ActivityIndicator size="large" color="#7C3AED" style={styles.loader} />
+        <ActivityIndicator size="large" color={Colors.orange} style={styles.loader} />
       ) : (
         <View style={styles.plans}>
           {monthlyPkg && (
@@ -135,7 +136,7 @@ export default function UpgradeScreen() {
         style={styles.restoreButton}
       >
         {isRestoring ? (
-          <ActivityIndicator size="small" color="#7C3AED" />
+          <ActivityIndicator size="small" color={Colors.orange} />
         ) : (
           <Text style={styles.restoreText}>Restore Purchases</Text>
         )}
@@ -183,7 +184,7 @@ function PlanCard({
         style={[styles.upgradeButton, isBestValue && styles.upgradeButtonFeatured]}
       >
         {loading ? (
-          <ActivityIndicator size="small" color="#fff" />
+          <ActivityIndicator size="small" color={Colors.white} />
         ) : (
           <Text style={styles.upgradeButtonText}>Upgrade</Text>
         )}
@@ -200,45 +201,55 @@ const BENEFITS = [
 ];
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#0F0F1A' },
+  container: { flex: 1, backgroundColor: Colors.navy },
   content: { padding: 24, paddingBottom: 48 },
-  title: { fontSize: 28, fontWeight: '700', color: '#F3F4F6', textAlign: 'center', marginBottom: 8 },
-  subtitle: { fontSize: 16, color: '#9CA3AF', textAlign: 'center', marginBottom: 24 },
+  title: { fontSize: 28, fontFamily: 'Poppins_700Bold', color: Colors.white, textAlign: 'center', marginBottom: 8 },
+  subtitle: { fontSize: 16, fontFamily: 'Inter_400Regular', color: Colors.gray3, textAlign: 'center', marginBottom: 24 },
   benefits: { marginVertical: 20 },
-  benefit: { fontSize: 15, color: '#D1D5DB', marginBottom: 8 },
+  benefit: { fontSize: 15, fontFamily: 'Inter_400Regular', color: Colors.gray3, marginBottom: 8 },
   loader: { marginVertical: 32 },
   plans: { flexDirection: 'row', gap: 12, marginBottom: 24 },
   planCard: {
     flex: 1,
-    backgroundColor: '#1F1F33',
+    backgroundColor: Colors.navyCard,
     borderRadius: 16,
     padding: 20,
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#374151',
+    borderColor: Colors.gold + '33',
   },
-  planCardFeatured: { borderColor: '#7C3AED', backgroundColor: '#1E1040' },
+  planCardFeatured: { borderColor: Colors.orange, backgroundColor: Colors.navyLight },
   badge: {
-    backgroundColor: '#7C3AED',
+    backgroundColor: Colors.orange,
     borderRadius: 8,
     paddingHorizontal: 8,
     paddingVertical: 2,
     marginBottom: 8,
   },
-  badgeText: { color: '#fff', fontSize: 11, fontWeight: '700' },
-  planLabel: { fontSize: 14, color: '#9CA3AF', marginBottom: 6, fontWeight: '600' },
-  planPrice: { fontSize: 24, fontWeight: '700', color: '#F3F4F6', marginBottom: 16 },
-  planPeriod: { fontSize: 14, fontWeight: '400', color: '#9CA3AF' },
+  badgeText: { color: Colors.white, fontSize: 11, fontFamily: 'Inter_600SemiBold' },
+  planLabel: { fontSize: 14, fontFamily: 'Inter_600SemiBold', color: Colors.gray3, marginBottom: 6 },
+  planPrice: { fontSize: 24, fontFamily: 'Poppins_700Bold', color: Colors.white, marginBottom: 16 },
+  planPeriod: { fontSize: 14, fontFamily: 'Inter_400Regular', color: Colors.gray3 },
   upgradeButton: {
-    backgroundColor: '#4B5563',
+    backgroundColor: Colors.navyLight,
     borderRadius: 10,
     paddingVertical: 12,
     paddingHorizontal: 20,
     width: '100%',
     alignItems: 'center',
+    borderWidth: 1,
+    borderColor: Colors.gold + '33',
   },
-  upgradeButtonFeatured: { backgroundColor: '#7C3AED' },
-  upgradeButtonText: { color: '#fff', fontWeight: '700', fontSize: 15 },
+  upgradeButtonFeatured: {
+    backgroundColor: Colors.orange,
+    borderColor: Colors.orange,
+    shadowColor: Colors.orange,
+    shadowOpacity: 0.4,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 4,
+  },
+  upgradeButtonText: { color: Colors.white, fontFamily: 'Poppins_600SemiBold', fontSize: 15 },
   restoreButton: { alignItems: 'center', paddingVertical: 12 },
-  restoreText: { color: '#7C3AED', fontSize: 14, textDecorationLine: 'underline' },
+  restoreText: { color: Colors.orange, fontSize: 14, fontFamily: 'Inter_400Regular', textDecorationLine: 'underline' },
 });

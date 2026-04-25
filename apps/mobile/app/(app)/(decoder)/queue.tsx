@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useMemo } from 'react';
+import { useState, useCallback } from 'react';
 import {
   View,
   Text,
@@ -12,6 +12,7 @@ import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '@/src/lib/api';
+import { Colors } from '@/src/theme';
 
 type Customer = { id: string; phone: string; displayName: string | null };
 type SubmissionMessage = { type: string; content: string | null; audioDurationS: number | null };
@@ -69,7 +70,7 @@ function totalDuration(messages: SubmissionMessage[]) {
 }
 
 const STATUS_COLOR: Record<FilterStatus, string> = {
-  NEW: '#F59E0B',
+  NEW: Colors.warning,
   IN_PROGRESS: '#3B82F6',
   COMPLETED: '#10B981',
 };
@@ -206,7 +207,7 @@ export default function DecoderQueue() {
 
       {activeQuery.isLoading ? (
         <View style={styles.center}>
-          <ActivityIndicator color="#9B5DE5" size="large" />
+          <ActivityIndicator color={Colors.orange} size="large" />
         </View>
       ) : (
         <FlatList
@@ -218,7 +219,7 @@ export default function DecoderQueue() {
             <RefreshControl
               refreshing={activeQuery.isRefetching}
               onRefresh={() => activeQuery.refetch()}
-              tintColor="#9B5DE5"
+              tintColor={Colors.orange}
             />
           }
           ListEmptyComponent={
@@ -235,7 +236,7 @@ export default function DecoderQueue() {
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: '#0D0D0D' },
+  safe: { flex: 1, backgroundColor: Colors.navy },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -244,72 +245,74 @@ const styles = StyleSheet.create({
     paddingTop: 16,
     paddingBottom: 8,
   },
-  title: { color: '#FFF', fontSize: 26, fontWeight: '700' },
-  subtitle: { color: '#6B7280', fontSize: 13, marginTop: 2 },
+  title: { color: Colors.white, fontSize: 26, fontFamily: 'Poppins_700Bold' },
+  subtitle: { color: Colors.gray4, fontSize: 13, fontFamily: 'Inter_400Regular', marginTop: 2 },
   headerRight: { flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 4 },
-  recordBtn: { backgroundColor: '#9B5DE5', borderRadius: 8, paddingHorizontal: 12, paddingVertical: 6 },
-  recordBtnText: { color: '#FFF', fontSize: 13, fontWeight: '700' },
+  recordBtn: { backgroundColor: Colors.orange, borderRadius: 8, paddingHorizontal: 12, paddingVertical: 6 },
+  recordBtnText: { color: Colors.white, fontSize: 13, fontFamily: 'Inter_600SemiBold' },
   refreshBtn: { padding: 4 },
-  refreshIcon: { color: '#9B5DE5', fontSize: 22 },
+  refreshIcon: { color: Colors.orange, fontSize: 22 },
 
   tabRow: {
     flexDirection: 'row',
     marginHorizontal: 20,
     marginBottom: 12,
-    backgroundColor: '#1A1A2E',
+    backgroundColor: Colors.navyCard,
     borderRadius: 10,
     padding: 3,
   },
   tab: { flex: 1, paddingVertical: 8, alignItems: 'center', borderRadius: 8 },
-  tabActive: { backgroundColor: '#9B5DE5' },
-  tabLabel: { color: '#6B7280', fontSize: 13, fontWeight: '600' },
-  tabLabelActive: { color: '#FFF' },
+  tabActive: { backgroundColor: Colors.orange },
+  tabLabel: { color: Colors.gray4, fontSize: 13, fontFamily: 'Inter_600SemiBold' },
+  tabLabelActive: { color: Colors.white },
 
   filterRow: { flexDirection: 'row', paddingHorizontal: 16, gap: 8, marginBottom: 12 },
   filterPill: {
     paddingHorizontal: 14,
     paddingVertical: 6,
     borderRadius: 20,
-    backgroundColor: '#1A1A2E',
+    backgroundColor: Colors.navyCard,
     borderWidth: 1,
-    borderColor: '#374151',
+    borderColor: Colors.gold + '33',
   },
-  filterPillActive: { backgroundColor: '#2D1B69', borderColor: '#9B5DE5' },
-  filterText: { color: '#9CA3AF', fontSize: 13, fontWeight: '500' },
-  filterTextActive: { color: '#C4B5FD' },
+  filterPillActive: { backgroundColor: Colors.orangeDim, borderColor: Colors.orange },
+  filterText: { color: Colors.gray3, fontSize: 13, fontFamily: 'Inter_500Medium' },
+  filterTextActive: { color: Colors.orangeLight },
 
   list: { paddingBottom: 40 },
   emptyContainer: { flex: 1 },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   empty: { flex: 1, justifyContent: 'center', alignItems: 'center', gap: 12, padding: 40 },
   emptyIcon: { fontSize: 48, color: '#10B981' },
-  emptyTitle: { color: '#FFF', fontSize: 20, fontWeight: '700' },
-  emptySubtitle: { color: '#6B7280', fontSize: 14, textAlign: 'center' },
+  emptyTitle: { color: Colors.white, fontSize: 20, fontFamily: 'Poppins_700Bold' },
+  emptySubtitle: { color: Colors.gray4, fontSize: 14, fontFamily: 'Inter_400Regular', textAlign: 'center' },
 
   card: {
-    backgroundColor: '#1A1A2E',
+    backgroundColor: Colors.navyCard,
     borderRadius: 14,
     padding: 16,
     marginHorizontal: 16,
     marginVertical: 5,
     gap: 10,
+    borderWidth: 1,
+    borderColor: Colors.gold + '22',
   },
   cardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  phone: { color: '#FFF', fontSize: 15, fontWeight: '600' },
+  phone: { color: Colors.white, fontSize: 15, fontFamily: 'Inter_600SemiBold' },
   statusBadge: {
     borderRadius: 6,
     borderWidth: 1,
     paddingHorizontal: 8,
     paddingVertical: 3,
   },
-  statusText: { fontSize: 11, fontWeight: '700' },
+  statusText: { fontSize: 11, fontFamily: 'Inter_600SemiBold' },
   cardMeta: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  typeBadge: { backgroundColor: '#374151', borderRadius: 6, paddingHorizontal: 8, paddingVertical: 3 },
-  typeText: { color: '#D1D5DB', fontSize: 12 },
-  dur: { color: '#9CA3AF', fontSize: 12 },
-  priorityBadge: { backgroundColor: '#78350F22', borderRadius: 6, paddingHorizontal: 8, paddingVertical: 3 },
-  priorityText: { color: '#F59E0B', fontSize: 11, fontWeight: '600' },
+  typeBadge: { backgroundColor: Colors.navyLight, borderRadius: 6, paddingHorizontal: 8, paddingVertical: 3 },
+  typeText: { color: Colors.gray3, fontSize: 12, fontFamily: 'Inter_400Regular' },
+  dur: { color: Colors.gray3, fontSize: 12 },
+  priorityBadge: { backgroundColor: Colors.goldDim, borderRadius: 6, paddingHorizontal: 8, paddingVertical: 3 },
+  priorityText: { color: Colors.gold, fontSize: 11, fontFamily: 'Inter_600SemiBold' },
   cardFooter: { flexDirection: 'row', justifyContent: 'space-between' },
-  time: { color: '#6B7280', fontSize: 12 },
-  msgCount: { color: '#6B7280', fontSize: 12 },
+  time: { color: Colors.gray4, fontSize: 12 },
+  msgCount: { color: Colors.gray4, fontSize: 12 },
 });

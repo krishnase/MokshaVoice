@@ -14,6 +14,12 @@ config.resolver.nodeModulesPaths = [
   path.resolve(workspaceRoot, 'node_modules'),
 ];
 
+// Block backend (Node.js) code from being bundled into the mobile app
+const backendPath = path.resolve(workspaceRoot, 'apps/backend');
+config.resolver.blockList = [
+  new RegExp(`^${backendPath.replace(/[/\\]/g, '[/\\\\]')}\\/.*$`),
+];
+
 // Fix Firebase ESM/CJS resolution conflict with Metro + Hermes
 config.resolver.sourceExts = ['jsx', 'js', 'ts', 'tsx', 'cjs', 'json'];
 config.resolver.unstable_enablePackageExports = false;

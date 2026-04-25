@@ -18,6 +18,7 @@ import { useAuthStore } from '@/src/stores/authStore';
 import { useSubscriptionStore } from '@/src/stores/subscriptionStore';
 import { api } from '@/src/lib/api';
 import type { VerifyOtpResponse } from '@mokshavoice/shared-types';
+import { Colors } from '@/src/theme';
 
 const OTP_LENGTH = 6;
 const RESEND_COUNTDOWN_S = 60;
@@ -252,7 +253,7 @@ export default function VerifyScreen() {
                 accessibilityLabel="Resend OTP"
               >
                 {isResending ? (
-                  <ActivityIndicator size="small" color="#7C3AED" />
+                  <ActivityIndicator size="small" color={Colors.orange} />
                 ) : (
                   <Text style={styles.resendLink}>Resend code</Text>
                 )}
@@ -270,46 +271,47 @@ export default function VerifyScreen() {
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: '#0F0F1A' },
+  safe: { flex: 1, backgroundColor: Colors.navy },
   flex: { flex: 1 },
   container: { flex: 1, paddingHorizontal: 24, paddingBottom: 32 },
   backButton: { paddingTop: 16, paddingBottom: 8, alignSelf: 'flex-start' },
-  backText: { fontSize: 16, color: '#7C3AED', fontWeight: '500' },
+  backText: { fontFamily: 'Inter_500Medium', fontSize: 16, color: Colors.orange },
   header: { paddingTop: 32, paddingBottom: 40 },
-  title: { fontSize: 26, fontWeight: '700', color: '#F3F4F6', marginBottom: 10 },
-  subtitle: { fontSize: 15, color: '#9CA3AF', lineHeight: 22 },
-  phoneHighlight: { color: '#F3F4F6', fontWeight: '600' },
-  otpRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 32,
-  },
+  title: { fontFamily: 'Poppins_700Bold', fontSize: 26, color: Colors.white, marginBottom: 10 },
+  subtitle: { fontFamily: 'Inter_400Regular', fontSize: 15, color: Colors.gray3, lineHeight: 22 },
+  phoneHighlight: { fontFamily: 'Inter_600SemiBold', color: Colors.white },
+  otpRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 32 },
   otpCell: {
     width: 48,
     height: 60,
     borderRadius: 12,
     borderWidth: 1.5,
-    borderColor: '#374151',
-    backgroundColor: '#1F1F33',
+    borderColor: Colors.gold + '44',
+    backgroundColor: Colors.navyCard,
     textAlign: 'center',
+    fontFamily: 'Poppins_700Bold',
     fontSize: 24,
-    fontWeight: '700',
-    color: '#F3F4F6',
+    color: Colors.white,
   },
-  otpCellFilled: { borderColor: '#7C3AED', backgroundColor: '#1E1040' },
+  otpCellFilled: { borderColor: Colors.orange, backgroundColor: Colors.orangeDim },
   otpCellDisabled: { opacity: 0.5 },
   verifyButton: {
-    backgroundColor: '#7C3AED',
+    backgroundColor: Colors.orange,
     borderRadius: 14,
     paddingVertical: 16,
     alignItems: 'center',
     marginBottom: 24,
+    shadowColor: Colors.orange,
+    shadowOpacity: 0.4,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 6,
   },
-  verifyButtonLoading: { backgroundColor: '#5B21B6' },
-  verifyButtonText: { color: '#fff', fontSize: 16, fontWeight: '700', letterSpacing: 0.3 },
+  verifyButtonLoading: { backgroundColor: Colors.orangeDim },
+  verifyButtonText: { fontFamily: 'Poppins_600SemiBold', color: Colors.white, fontSize: 16, letterSpacing: 0.3 },
   verifyingRow: { flexDirection: 'row', alignItems: 'center' },
   resendRow: { alignItems: 'center', marginBottom: 24 },
-  resendCountdown: { fontSize: 14, color: '#6B7280' },
-  resendLink: { fontSize: 14, color: '#7C3AED', fontWeight: '600', textDecorationLine: 'underline' },
-  tip: { fontSize: 12, color: '#6B7280', textAlign: 'center', lineHeight: 18 },
+  resendCountdown: { fontFamily: 'Inter_400Regular', fontSize: 14, color: Colors.gray4 },
+  resendLink: { fontFamily: 'Inter_600SemiBold', fontSize: 14, color: Colors.orange, textDecorationLine: 'underline' },
+  tip: { fontFamily: 'Inter_400Regular', fontSize: 12, color: Colors.gray4, textAlign: 'center', lineHeight: 18 },
 });

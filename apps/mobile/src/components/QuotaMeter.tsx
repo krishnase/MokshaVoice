@@ -1,6 +1,7 @@
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { useRouter } from 'expo-router';
 import type { Plan } from '@mokshavoice/shared-types';
+import { Colors } from '@/src/theme';
 
 interface Props {
   used: number;
@@ -11,7 +12,7 @@ interface Props {
 export function QuotaMeter({ used, limit, plan }: Props) {
   const router = useRouter();
   const ratio = Math.min(used / limit, 1);
-  const barColor = ratio >= 1 ? '#EF476F' : ratio >= 0.6 ? '#FFB703' : '#06D6A0';
+  const barColor = ratio >= 1 ? Colors.error : ratio >= 0.6 ? Colors.warning : Colors.success;
   const showUpgrade = plan === 'FREE' && (used >= 3 || used >= limit);
 
   return (
@@ -43,7 +44,7 @@ const styles = StyleSheet.create({
   container: {
     paddingHorizontal: 20,
     paddingVertical: 12,
-    backgroundColor: '#1A1A2E',
+    backgroundColor: Colors.navyCard,
     borderRadius: 12,
     gap: 8,
   },
@@ -52,8 +53,8 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
   },
-  label: { color: '#CCC', fontSize: 13 },
-  count: { color: '#FFF', fontWeight: '600' },
+  label: { color: Colors.gray3, fontSize: 13 },
+  count: { color: Colors.white, fontWeight: '600' },
   badge: {
     fontSize: 11,
     fontWeight: '700',
@@ -62,11 +63,11 @@ const styles = StyleSheet.create({
     borderRadius: 4,
     overflow: 'hidden',
   },
-  freeBadge: { backgroundColor: '#333', color: '#888' },
-  premiumBadge: { backgroundColor: '#9B5DE5', color: '#FFF' },
+  freeBadge: { backgroundColor: Colors.navyLight, color: Colors.gray3 },
+  premiumBadge: { backgroundColor: Colors.orange, color: Colors.white },
   track: {
     height: 6,
-    backgroundColor: '#333',
+    backgroundColor: Colors.navyLight,
     borderRadius: 3,
     overflow: 'hidden',
   },
@@ -75,5 +76,5 @@ const styles = StyleSheet.create({
     marginTop: 4,
     alignSelf: 'flex-start',
   },
-  upgradeBtnText: { color: '#9B5DE5', fontSize: 13, fontWeight: '600' },
+  upgradeBtnText: { color: Colors.orange, fontSize: 13, fontWeight: '600' },
 });

@@ -22,10 +22,7 @@ export const revenueCatWebhookRoute: FastifyPluginAsync = async (fastify) => {
     '/revenuecat',
     {
       config: { rawBody: true },
-      schema: {
-        description: 'RevenueCat webhook receiver',
-        tags: ['webhooks'],
-      },
+      schema: {},
     },
     async (request, reply) => {
       const rawBody = (request as unknown as { rawBody: string }).rawBody;

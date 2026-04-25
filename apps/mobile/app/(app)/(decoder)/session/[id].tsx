@@ -26,6 +26,7 @@ import { useAuthStore } from '@/src/stores/authStore';
 import { getSocket } from '@/src/lib/socket';
 import { api } from '@/src/lib/api';
 import type { MessageWithSender } from '@mokshavoice/shared-types';
+import { Colors } from '@/src/theme';
 
 type SessionStatus = 'NEW' | 'IN_PROGRESS' | 'COMPLETED';
 type SessionDetail = {
@@ -44,7 +45,7 @@ type TeamMember = {
 };
 
 const STATUS_COLOR: Record<SessionStatus, string> = {
-  NEW: '#F59E0B',
+  NEW: Colors.warning,
   IN_PROGRESS: '#3B82F6',
   COMPLETED: '#10B981',
 };
@@ -327,13 +328,13 @@ export default function DecoderSession() {
 
       <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         {isLoading ? (
-          <View style={styles.center}><ActivityIndicator color="#9B5DE5" size="large" /></View>
+          <View style={styles.center}><ActivityIndicator color={Colors.orange} size="large" /></View>
         ) : (
           <FlatList
             data={displayMessages} keyExtractor={(item) => item.id} renderItem={renderItem} inverted
             contentContainerStyle={styles.messageList}
             ListHeaderComponent={typingUserId ? <TypingIndicator /> : null}
-            ListFooterComponent={isFetchingNextPage ? <View style={styles.pageLoader}><ActivityIndicator color="#9B5DE5" size="small" /></View> : null}
+            ListFooterComponent={isFetchingNextPage ? <View style={styles.pageLoader}><ActivityIndicator color={Colors.orange} size="small" /></View> : null}
             onEndReached={() => hasNextPage && fetchNextPage()} onEndReachedThreshold={0.3}
           />
         )}
@@ -347,14 +348,14 @@ export default function DecoderSession() {
                 onPress={handleClaim}
                 disabled={isClaiming || isAssigning}
               >
-                {isClaiming ? <ActivityIndicator color="#FFF" size="small" /> : <Text style={styles.claimBtnText}>Claim for Myself</Text>}
+                {isClaiming ? <ActivityIndicator color={Colors.white} size="small" /> : <Text style={styles.claimBtnText}>Claim for Myself</Text>}
               </TouchableOpacity>
               <TouchableOpacity
                 style={[styles.assignBtn, (isClaiming || isAssigning) && styles.btnDisabled]}
                 onPress={handleAssign}
                 disabled={isClaiming || isAssigning}
               >
-                {isAssigning ? <ActivityIndicator color="#9B5DE5" size="small" /> : <Text style={styles.assignBtnText}>Assign to Decoder</Text>}
+                {isAssigning ? <ActivityIndicator color={Colors.orange} size="small" /> : <Text style={styles.assignBtnText}>Assign to Decoder</Text>}
               </TouchableOpacity>
             </View>
           </View>
@@ -369,7 +370,7 @@ export default function DecoderSession() {
               <View style={styles.textRow}>
                 <HoldToRecord isRecording={false} isDisabled={isUploading || isSending} compact onHoldStart={handleHoldStart} onHoldEnd={handleHoldEnd} onCancel={() => cancelRecording()} durationMs={0} />
                 <TextInput
-                  style={styles.input} placeholder="Type your analysis…" placeholderTextColor="#555"
+                  style={styles.input} placeholder="Type your analysis…" placeholderTextColor={Colors.gray4}
                   value={textInput} onChangeText={handleTextChange} multiline maxLength={4000} editable={!isSending && !isUploading}
                 />
                 {textInput.trim().length > 0 && (
@@ -380,14 +381,14 @@ export default function DecoderSession() {
               </View>
             )}
             <TouchableOpacity style={[styles.completeBtn, isCompleting && styles.btnDisabled]} onPress={handleComplete} disabled={isCompleting}>
-              {isCompleting ? <ActivityIndicator color="#FFF" size="small" /> : <Text style={styles.completeBtnText}>✓ Mark Complete</Text>}
+              {isCompleting ? <ActivityIndicator color={Colors.white} size="small" /> : <Text style={styles.completeBtnText}>✓ Mark Complete</Text>}
             </TouchableOpacity>
             <View style={styles.mgmtRow}>
               <TouchableOpacity style={styles.mgmtBtn} onPress={handleReassign}>
                 <Text style={styles.mgmtBtnText}>⇄ Reassign</Text>
               </TouchableOpacity>
               <TouchableOpacity style={[styles.mgmtBtn, styles.mgmtBtnDanger]} onPress={handleUnclaim} disabled={isUnclaiming}>
-                {isUnclaiming ? <ActivityIndicator color="#EF4444" size="small" /> : <Text style={[styles.mgmtBtnText, { color: '#EF4444' }]}>↩ Back to Pending</Text>}
+                {isUnclaiming ? <ActivityIndicator color={Colors.error} size="small" /> : <Text style={[styles.mgmtBtnText, { color: Colors.error }]}>↩ Back to Pending</Text>}
               </TouchableOpacity>
             </View>
           </View>
@@ -404,7 +405,7 @@ export default function DecoderSession() {
                   <Text style={styles.mgmtBtnText}>⇄ Reassign</Text>
                 </TouchableOpacity>
                 <TouchableOpacity style={[styles.mgmtBtn, styles.mgmtBtnDanger]} onPress={handleUnclaim} disabled={isUnclaiming}>
-                  {isUnclaiming ? <ActivityIndicator color="#EF4444" size="small" /> : <Text style={[styles.mgmtBtnText, { color: '#EF4444' }]}>↩ Back to Pending</Text>}
+                  {isUnclaiming ? <ActivityIndicator color={Colors.error} size="small" /> : <Text style={[styles.mgmtBtnText, { color: Colors.error }]}>↩ Back to Pending</Text>}
                 </TouchableOpacity>
               </View>
             )}
@@ -420,40 +421,40 @@ export default function DecoderSession() {
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: '#0D0D0D' },
+  safe: { flex: 1, backgroundColor: Colors.navy },
   flex: { flex: 1 },
-  topBar: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: '#1A1A2E' },
+  topBar: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: Colors.navyCard },
   backBtn: { paddingVertical: 4, paddingRight: 8 },
-  backText: { color: '#9B5DE5', fontSize: 15 },
+  backText: { color: Colors.orange, fontSize: 15, fontFamily: 'Inter_500Medium' },
   headingWrap: { alignItems: 'center', gap: 4, flex: 1 },
-  heading: { color: '#FFF', fontSize: 15, fontWeight: '600' },
+  heading: { color: Colors.white, fontSize: 15, fontFamily: 'Poppins_600SemiBold' },
   statusBadge: { borderRadius: 6, borderWidth: 1, paddingHorizontal: 8, paddingVertical: 2 },
-  statusText: { fontSize: 10, fontWeight: '700' },
-  assignedMeta: { color: '#6B7280', fontSize: 10, textAlign: 'center' },
+  statusText: { fontSize: 10, fontFamily: 'Inter_600SemiBold' },
+  assignedMeta: { color: Colors.gray4, fontSize: 10, fontFamily: 'Inter_400Regular', textAlign: 'center' },
   placeholder: { width: 60 },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   messageList: { paddingHorizontal: 16, paddingVertical: 12, gap: 2 },
   pageLoader: { paddingVertical: 12, alignItems: 'center' },
-  claimArea: { padding: 20, gap: 12, borderTopWidth: 1, borderTopColor: '#1A1A2E', alignItems: 'center' },
-  claimHint: { color: '#9CA3AF', fontSize: 13, textAlign: 'center' },
+  claimArea: { padding: 20, gap: 12, borderTopWidth: 1, borderTopColor: Colors.navyCard, alignItems: 'center' },
+  claimHint: { color: Colors.gray3, fontSize: 13, fontFamily: 'Inter_400Regular', textAlign: 'center' },
   claimRow: { flexDirection: 'row', gap: 10, width: '100%' },
-  claimBtn: { flex: 1, backgroundColor: '#9B5DE5', borderRadius: 12, paddingVertical: 14, alignItems: 'center' },
-  claimBtnText: { color: '#FFF', fontSize: 15, fontWeight: '700' },
-  assignBtn: { flex: 1, borderRadius: 12, paddingVertical: 14, alignItems: 'center', borderWidth: 1.5, borderColor: '#9B5DE5' },
-  assignBtnText: { color: '#9B5DE5', fontSize: 15, fontWeight: '600' },
+  claimBtn: { flex: 1, backgroundColor: Colors.orange, borderRadius: 12, paddingVertical: 14, alignItems: 'center', shadowColor: Colors.orange, shadowOpacity: 0.3, shadowRadius: 8, shadowOffset: { width: 0, height: 2 }, elevation: 4 },
+  claimBtnText: { color: Colors.white, fontSize: 15, fontFamily: 'Poppins_600SemiBold' },
+  assignBtn: { flex: 1, borderRadius: 12, paddingVertical: 14, alignItems: 'center', borderWidth: 1.5, borderColor: Colors.orange },
+  assignBtnText: { color: Colors.orange, fontSize: 15, fontFamily: 'Inter_600SemiBold' },
   btnDisabled: { opacity: 0.5 },
-  inputArea: { borderTopWidth: 1, borderTopColor: '#1A1A2E', paddingHorizontal: 12, paddingTop: 10, paddingBottom: 8, backgroundColor: '#0D0D0D', gap: 8 },
+  inputArea: { borderTopWidth: 1, borderTopColor: Colors.navyCard, paddingHorizontal: 12, paddingTop: 10, paddingBottom: 8, backgroundColor: Colors.navy, gap: 8 },
   textRow: { flexDirection: 'row', alignItems: 'flex-end', gap: 8 },
-  input: { flex: 1, backgroundColor: '#1A1A2E', borderRadius: 20, paddingHorizontal: 14, paddingVertical: 10, color: '#FFF', fontSize: 15, maxHeight: 100 },
-  sendBtn: { width: 38, height: 38, borderRadius: 19, backgroundColor: '#9B5DE5', justifyContent: 'center', alignItems: 'center' },
-  sendIcon: { color: '#FFF', fontSize: 16 },
+  input: { flex: 1, backgroundColor: Colors.navyCard, borderRadius: 20, paddingHorizontal: 14, paddingVertical: 10, color: Colors.white, fontSize: 15, fontFamily: 'Inter_400Regular', maxHeight: 100 },
+  sendBtn: { width: 38, height: 38, borderRadius: 19, backgroundColor: Colors.orange, justifyContent: 'center', alignItems: 'center' },
+  sendIcon: { color: Colors.white, fontSize: 16 },
   completeBtn: { backgroundColor: '#10B981', borderRadius: 10, paddingVertical: 10, alignItems: 'center' },
-  completeBtnText: { color: '#FFF', fontSize: 14, fontWeight: '700' },
-  errorText: { color: '#EF4444', fontSize: 12 },
-  bannerArea: { padding: 16, borderTopWidth: 1, borderTopColor: '#1A1A2E', alignItems: 'center', gap: 12 },
-  bannerText: { color: '#6B7280', fontSize: 13, fontWeight: '500' },
+  completeBtnText: { color: Colors.white, fontSize: 14, fontFamily: 'Inter_600SemiBold' },
+  errorText: { color: Colors.error, fontSize: 12, fontFamily: 'Inter_400Regular' },
+  bannerArea: { padding: 16, borderTopWidth: 1, borderTopColor: Colors.navyCard, alignItems: 'center', gap: 12 },
+  bannerText: { color: Colors.gray4, fontSize: 13, fontFamily: 'Inter_500Medium' },
   mgmtRow: { flexDirection: 'row', gap: 8, width: '100%' },
-  mgmtBtn: { flex: 1, borderRadius: 8, paddingVertical: 8, alignItems: 'center', borderWidth: 1, borderColor: '#374151' },
-  mgmtBtnDanger: { borderColor: '#7F1D1D' },
-  mgmtBtnText: { color: '#9B5DE5', fontSize: 12, fontWeight: '600' },
+  mgmtBtn: { flex: 1, borderRadius: 8, paddingVertical: 8, alignItems: 'center', borderWidth: 1, borderColor: Colors.gold + '44' },
+  mgmtBtnDanger: { borderColor: Colors.error + '44' },
+  mgmtBtnText: { color: Colors.orange, fontSize: 12, fontFamily: 'Inter_600SemiBold' },
 });

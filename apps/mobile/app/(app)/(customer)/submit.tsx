@@ -20,6 +20,7 @@ import { QuotaMeter } from '@/src/components/QuotaMeter';
 import { useSubscriptionStore } from '@/src/stores/subscriptionStore';
 import { useAuthStore } from '@/src/stores/authStore';
 import { api } from '@/src/lib/api';
+import { Colors } from '@/src/theme';
 
 const MAX_TEXT = 1000;
 
@@ -45,7 +46,6 @@ export default function SubmitDream() {
 
   const [isRecording, setIsRecording] = useState(false);
   const [clips, setClips] = useState<Clip[]>([]);
-  // Start with one empty note so the text section is always visible
   const [notes, setNotes] = useState<Note[]>([{ id: nextId(), value: '' }]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [focusedNoteId, setFocusedNoteId] = useState<string | null>(null);
@@ -53,8 +53,6 @@ export default function SubmitDream() {
   const validNotes = notes.filter((n) => n.value.trim().length > 0);
   const canSubmit = clips.length > 0 || validNotes.length > 0;
   const lastNoteHasContent = (notes[notes.length - 1]?.value.trim().length ?? 0) > 0;
-
-  // ── Recording ──────────────────────────────────────────────────────────────
 
   async function startRecording() {
     if (isRecording || isOperatingRef.current) return;
@@ -106,8 +104,6 @@ export default function SubmitDream() {
     setClips((prev) => prev.filter((c) => c.id !== id));
   }
 
-  // ── Notes ─────────────────────────────────────────────────────────────────
-
   function updateNote(id: string, value: string) {
     setNotes((prev) =>
       prev.map((n) => (n.id === id ? { ...n, value: value.slice(0, MAX_TEXT) } : n)),
@@ -117,7 +113,6 @@ export default function SubmitDream() {
   function removeNote(id: string) {
     setNotes((prev) => {
       const next = prev.filter((n) => n.id !== id);
-      // Always keep at least one note input
       return next.length > 0 ? next : [{ id: nextId(), value: '' }];
     });
   }
@@ -126,16 +121,12 @@ export default function SubmitDream() {
     setNotes((prev) => [...prev, { id: nextId(), value: '' }]);
   }
 
-  // ── Submit ────────────────────────────────────────────────────────────────
-
   async function handleSubmit() {
     if (!canSubmit || isSubmitting) return;
     setIsSubmitting(true);
     try {
       const formData = new FormData();
 
-      // Append clips in order — durationS immediately after each audio so
-      // backend can zip them by index
       for (const clip of clips) {
         formData.append('audio', {
           uri: clip.uri,
@@ -148,7 +139,6 @@ export default function SubmitDream() {
       for (const note of validNotes) {
         formData.append('text', note.value.trim());
       }
-      // Also flush any unsaved text still in an input box
       for (const note of notes) {
         if (!validNotes.find((n) => n.id === note.id) && note.value.trim()) {
           formData.append('text', note.value.trim());
@@ -156,7 +146,6 @@ export default function SubmitDream() {
       }
 
       const { session } = await api.postForm<SubmitResponse>('/v1/dreams', formData);
-      // Refresh home screen so the new session appears immediately
       void queryClient.invalidateQueries({ queryKey: ['sessions'] });
       void queryClient.invalidateQueries({ queryKey: ['subscription'] });
       router.replace(`/(app)/(customer)/session/${session.id}`);
@@ -166,8 +155,6 @@ export default function SubmitDream() {
       setIsSubmitting(false);
     }
   }
-
-  // ── Render ────────────────────────────────────────────────────────────────
 
   return (
     <SafeAreaView style={styles.safe}>
@@ -197,13 +184,12 @@ export default function SubmitDream() {
 
           <Text style={styles.subtitle}>Record and describe your dream</Text>
 
-          {/* ── Voice Recordings ─────────────────────────────────────────── */}
+          {/* Voice Recordings */}
           <View style={styles.section}>
             <Text style={styles.sectionLabel}>
               Voice Recordings{clips.length > 0 ? ` (${clips.length})` : ' (Optional)'}
             </Text>
 
-            {/* Saved clips list */}
             {clips.map((clip, i) => (
               <View key={clip.id} style={styles.clipRow}>
                 <Text style={styles.clipIcon}>🎙️</Text>
@@ -220,7 +206,6 @@ export default function SubmitDream() {
               </View>
             ))}
 
-            {/* Hold-to-record button */}
             <View style={styles.recordArea}>
               <Pressable
                 onPressIn={startRecording}
@@ -248,7 +233,7 @@ export default function SubmitDream() {
             </View>
           </View>
 
-          {/* ── Text Notes ───────────────────────────────────────────────── */}
+          {/* Text Notes */}
           <View style={styles.section}>
             <Text style={styles.sectionLabel}>
               Dream Notes{validNotes.length > 0 ? ` (${validNotes.length})` : ' (Optional)'}
@@ -270,7 +255,7 @@ export default function SubmitDream() {
                     focusedNoteId === note.id && styles.textAreaFocused,
                   ]}
                   placeholder="Describe your dream… What did you see, feel, or experience?"
-                  placeholderTextColor="#555"
+                  placeholderTextColor={Colors.gray4}
                   multiline
                   numberOfLines={4}
                   value={note.value}
@@ -303,7 +288,7 @@ export default function SubmitDream() {
           </View>
         </ScrollView>
 
-        {/* ── Submit Button ─────────────────────────────────────────────── */}
+        {/* Submit Button */}
         <View style={styles.submitArea}>
           <TouchableOpacity
             style={[styles.submitBtn, !canSubmit && styles.submitBtnDisabled]}
@@ -312,7 +297,7 @@ export default function SubmitDream() {
           >
             {isSubmitting ? (
               <View style={styles.submitRow}>
-                <ActivityIndicator color="#fff" />
+                <ActivityIndicator color={Colors.white} />
                 <Text style={styles.submitBtnText}>  Submitting…</Text>
               </View>
             ) : (
@@ -326,7 +311,7 @@ export default function SubmitDream() {
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: '#0D0D0D' },
+  safe: { flex: 1, backgroundColor: Colors.navy },
   flex: { flex: 1 },
   topBar: {
     flexDirection: 'row',
@@ -335,90 +320,92 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 14,
   },
-  backBtn: { color: '#7C3AED', fontSize: 15 },
-  heading: { color: '#FFF', fontSize: 18, fontWeight: '700' },
+  backBtn: { color: Colors.orange, fontSize: 15, fontFamily: 'Inter_500Medium' },
+  heading: { color: Colors.white, fontSize: 18, fontFamily: 'Poppins_600SemiBold' },
   placeholder: { width: 60 },
-  subtitle: { color: '#9CA3AF', fontSize: 14, marginBottom: 4 },
+  subtitle: { color: Colors.gray3, fontSize: 14, fontFamily: 'Inter_400Regular', marginBottom: 4 },
   content: { padding: 20, gap: 24, paddingBottom: 16 },
   section: { gap: 12 },
-  sectionLabel: { color: '#D1D5DB', fontSize: 14, fontWeight: '600' },
+  sectionLabel: { color: Colors.gray3, fontSize: 14, fontFamily: 'Inter_600SemiBold' },
 
-  // ── Clips ──────────────────────────────────────────────────────────────────
   clipRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#1A2E1A',
+    backgroundColor: Colors.greenDim,
     borderRadius: 10,
     paddingHorizontal: 14,
     paddingVertical: 12,
     gap: 10,
   },
   clipIcon: { fontSize: 16 },
-  clipText: { flex: 1, color: '#4ADE80', fontSize: 14, fontWeight: '500' },
+  clipText: { flex: 1, color: Colors.success, fontSize: 14, fontFamily: 'Inter_500Medium' },
   deleteBtn: { padding: 4 },
-  deleteText: { color: '#6B7280', fontSize: 14, fontWeight: '600' },
+  deleteText: { color: Colors.gray4, fontSize: 14, fontFamily: 'Inter_600SemiBold' },
 
-  // ── Record button ──────────────────────────────────────────────────────────
   recordArea: { alignItems: 'center', paddingVertical: 12, gap: 10 },
   recordButton: {
     width: 80,
     height: 80,
     borderRadius: 40,
-    backgroundColor: '#1F1F33',
+    backgroundColor: Colors.navyCard,
     borderWidth: 2,
-    borderColor: '#374151',
+    borderColor: Colors.gold + '44',
     alignItems: 'center',
     justifyContent: 'center',
   },
-  recordButtonPressed: { borderColor: '#7C3AED', backgroundColor: '#2D1B69' },
-  recordButtonRecording: { borderColor: '#EF4444', backgroundColor: '#3B0F0F' },
-  recordingDot: { width: 26, height: 26, borderRadius: 13, backgroundColor: '#EF4444' },
+  recordButtonPressed: { borderColor: Colors.orange, backgroundColor: Colors.orangeDim },
+  recordButtonRecording: { borderColor: Colors.error, backgroundColor: '#3B0F0F' },
+  recordingDot: { width: 26, height: 26, borderRadius: 13, backgroundColor: Colors.error },
   micIcon: { fontSize: 30 },
-  recordHint: { color: '#6B7280', fontSize: 13 },
+  recordHint: { color: Colors.gray4, fontSize: 13, fontFamily: 'Inter_400Regular' },
 
-  // ── Notes ─────────────────────────────────────────────────────────────────
   noteBlock: { gap: 6 },
   noteLabelRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
   },
-  noteIndex: { color: '#9CA3AF', fontSize: 12, fontWeight: '500' },
-  removeNoteText: { color: '#EF4444', fontSize: 12 },
+  noteIndex: { color: Colors.gray3, fontSize: 12, fontFamily: 'Inter_500Medium' },
+  removeNoteText: { color: Colors.error, fontSize: 12, fontFamily: 'Inter_400Regular' },
   textArea: {
-    backgroundColor: '#1A1A2E',
+    backgroundColor: Colors.navyCard,
     borderRadius: 12,
     padding: 14,
-    color: '#FFF',
+    color: Colors.white,
     fontSize: 15,
+    fontFamily: 'Inter_400Regular',
     lineHeight: 22,
     minHeight: 110,
     borderWidth: 1.5,
-    borderColor: '#374151',
+    borderColor: Colors.gold + '33',
   },
-  textAreaFocused: { borderColor: '#7C3AED' },
-  charCounter: { color: '#4B5563', fontSize: 11, textAlign: 'right' },
+  textAreaFocused: { borderColor: Colors.orange },
+  charCounter: { color: Colors.gray4, fontSize: 11, fontFamily: 'Inter_400Regular', textAlign: 'right' },
 
   addNoteBtn: {
     borderWidth: 1,
-    borderColor: '#7C3AED',
+    borderColor: Colors.orange,
     borderRadius: 10,
     paddingVertical: 10,
     alignItems: 'center',
   },
-  addNoteBtnDisabled: { borderColor: '#374151' },
-  addNoteBtnText: { color: '#7C3AED', fontSize: 14, fontWeight: '600' },
-  addNoteBtnTextDisabled: { color: '#4B5563' },
+  addNoteBtnDisabled: { borderColor: Colors.gold + '33' },
+  addNoteBtnText: { color: Colors.orange, fontSize: 14, fontFamily: 'Inter_600SemiBold' },
+  addNoteBtnTextDisabled: { color: Colors.gray4 },
 
-  // ── Submit ─────────────────────────────────────────────────────────────────
   submitArea: { padding: 20, paddingTop: 8 },
   submitBtn: {
-    backgroundColor: '#7C3AED',
+    backgroundColor: Colors.orange,
     borderRadius: 14,
     paddingVertical: 16,
     alignItems: 'center',
+    shadowColor: Colors.orange,
+    shadowOpacity: 0.4,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 6,
   },
-  submitBtnDisabled: { backgroundColor: '#4B5563' },
-  submitBtnText: { color: '#FFF', fontSize: 16, fontWeight: '700' },
+  submitBtnDisabled: { backgroundColor: Colors.gray4, shadowOpacity: 0 },
+  submitBtnText: { color: Colors.white, fontSize: 16, fontFamily: 'Poppins_600SemiBold' },
   submitRow: { flexDirection: 'row', alignItems: 'center' },
 });

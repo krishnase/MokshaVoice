@@ -59,7 +59,7 @@ export class AuthService {
     phone: string,
     firebaseIdToken: string,
     fastifyJwt: { sign: (payload: object, opts?: object) => string },
-  ): Promise<TokenPair & { user: Awaited<ReturnType<typeof this.getOrCreateUser>> }> {
+  ): Promise<TokenPair & { user: Record<string, unknown> }> {
     // 1. Verify the Firebase ID token — this is the authoritative OTP check
     let decoded: DecodedIdToken;
     try {

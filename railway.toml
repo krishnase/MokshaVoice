@@ -1,0 +1,10 @@
+[build]
+builder = "nixpacks"
+buildCommand = "pnpm --filter @mokshavoice/backend build"
+
+[deploy]
+startCommand = "pnpm --filter @mokshavoice/backend start:prod"
+healthcheckPath = "/health"
+healthcheckTimeout = 30
+restartPolicyType = "ON_FAILURE"
+restartPolicyMaxRetries = 3

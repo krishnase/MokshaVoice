@@ -16,6 +16,7 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useInfiniteQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/src/lib/api';
+import { Colors } from '@/src/theme';
 
 type Role = 'CUSTOMER' | 'DECODER' | 'MENTOR' | 'ADMIN';
 type AdminUser = {
@@ -33,10 +34,10 @@ const ROLES: Role[] = ['CUSTOMER', 'DECODER', 'MENTOR', 'ADMIN'];
 const ROLE_FILTERS = [{ label: 'All', value: undefined }, ...ROLES.map((r) => ({ label: r, value: r }))] as const;
 
 const ROLE_COLOR: Record<Role, string> = {
-  CUSTOMER: '#6B7280',
-  DECODER: '#9B5DE5',
+  CUSTOMER: Colors.gray3,
+  DECODER: Colors.gold,
   MENTOR: '#3B82F6',
-  ADMIN: '#EF4444',
+  ADMIN: Colors.error,
 };
 
 function maskPhone(phone: string) {
@@ -145,7 +146,7 @@ export default function AdminUsers() {
           disabled={isUpdating}
         >
           {isUpdating
-            ? <ActivityIndicator color="#9B5DE5" size="small" />
+            ? <ActivityIndicator color={Colors.orange} size="small" />
             : <Text style={styles.changeRoleText}>Change Role</Text>
           }
         </TouchableOpacity>
@@ -168,7 +169,7 @@ export default function AdminUsers() {
         <TextInput
           style={styles.searchInput}
           placeholder="Search by name or phone…"
-          placeholderTextColor="#555"
+          placeholderTextColor={Colors.gray4}
           value={search}
           onChangeText={setSearch}
           autoCorrect={false}
@@ -189,17 +190,17 @@ export default function AdminUsers() {
       </View>
 
       {query.isLoading ? (
-        <View style={styles.center}><ActivityIndicator color="#9B5DE5" size="large" /></View>
+        <View style={styles.center}><ActivityIndicator color={Colors.orange} size="large" /></View>
       ) : (
         <FlatList
           data={users}
           keyExtractor={(item) => item.id}
           renderItem={renderItem}
           contentContainerStyle={styles.list}
-          refreshControl={<RefreshControl refreshing={query.isRefetching} onRefresh={() => query.refetch()} tintColor="#9B5DE5" />}
+          refreshControl={<RefreshControl refreshing={query.isRefetching} onRefresh={() => query.refetch()} tintColor={Colors.orange} />}
           onEndReached={() => query.hasNextPage && query.fetchNextPage()}
           onEndReachedThreshold={0.3}
-          ListFooterComponent={query.isFetchingNextPage ? <ActivityIndicator color="#9B5DE5" style={{ marginVertical: 12 }} /> : null}
+          ListFooterComponent={query.isFetchingNextPage ? <ActivityIndicator color={Colors.orange} style={{ marginVertical: 12 }} /> : null}
           ListEmptyComponent={<View style={styles.empty}><Text style={styles.emptyText}>No users found</Text></View>}
         />
       )}
@@ -208,32 +209,32 @@ export default function AdminUsers() {
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: '#0D0D0D' },
+  safe: { flex: 1, backgroundColor: Colors.navy },
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingVertical: 12 },
   backBtn: { paddingRight: 8 },
-  backText: { color: '#9B5DE5', fontSize: 15 },
-  title: { color: '#FFF', fontSize: 18, fontWeight: '700' },
+  backText: { color: Colors.orange, fontSize: 15, fontFamily: 'Inter_500Medium' },
+  title: { color: Colors.white, fontSize: 18, fontFamily: 'Poppins_600SemiBold' },
   searchRow: { paddingHorizontal: 16, paddingBottom: 8 },
-  searchInput: { backgroundColor: '#1A1A2E', borderRadius: 10, paddingHorizontal: 14, paddingVertical: 10, color: '#FFF', fontSize: 14 },
+  searchInput: { backgroundColor: Colors.navyCard, borderRadius: 10, paddingHorizontal: 14, paddingVertical: 10, color: Colors.white, fontSize: 14, fontFamily: 'Inter_400Regular', borderWidth: 1, borderColor: Colors.gold + '22' },
   filterRow: { flexDirection: 'row', paddingHorizontal: 12, gap: 6, marginBottom: 8, flexWrap: 'wrap' },
-  filterPill: { paddingHorizontal: 12, paddingVertical: 5, borderRadius: 16, backgroundColor: '#1A1A2E', borderWidth: 1, borderColor: '#374151' },
-  filterPillActive: { backgroundColor: '#2D1B69', borderColor: '#9B5DE5' },
-  filterText: { color: '#9CA3AF', fontSize: 12, fontWeight: '500' },
-  filterTextActive: { color: '#C4B5FD' },
+  filterPill: { paddingHorizontal: 12, paddingVertical: 5, borderRadius: 16, backgroundColor: Colors.navyCard, borderWidth: 1, borderColor: Colors.gold + '33' },
+  filterPillActive: { backgroundColor: Colors.orangeDim, borderColor: Colors.orange },
+  filterText: { color: Colors.gray3, fontSize: 12, fontFamily: 'Inter_500Medium' },
+  filterTextActive: { color: Colors.orangeLight },
   list: { paddingBottom: 40 },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   empty: { paddingTop: 60, alignItems: 'center' },
-  emptyText: { color: '#6B7280', fontSize: 14 },
-  card: { backgroundColor: '#1A1A2E', borderRadius: 12, marginHorizontal: 16, marginVertical: 5, padding: 14, gap: 10 },
+  emptyText: { color: Colors.gray4, fontSize: 14, fontFamily: 'Inter_400Regular' },
+  card: { backgroundColor: Colors.navyCard, borderRadius: 12, marginHorizontal: 16, marginVertical: 5, padding: 14, gap: 10, borderWidth: 1, borderColor: Colors.gold + '18' },
   cardTop: { flexDirection: 'row', gap: 8 },
-  displayName: { color: '#FFF', fontSize: 15, fontWeight: '600' },
-  phone: { color: '#9CA3AF', fontSize: 12, marginTop: 2 },
-  meta: { color: '#6B7280', fontSize: 12, marginTop: 3 },
+  displayName: { color: Colors.white, fontSize: 15, fontFamily: 'Inter_600SemiBold' },
+  phone: { color: Colors.gray3, fontSize: 12, fontFamily: 'Inter_400Regular', marginTop: 2 },
+  meta: { color: Colors.gray4, fontSize: 12, fontFamily: 'Inter_400Regular', marginTop: 3 },
   roleBadge: { borderRadius: 6, borderWidth: 1, paddingHorizontal: 8, paddingVertical: 3 },
-  roleText: { fontSize: 10, fontWeight: '700' },
-  proBadge: { backgroundColor: '#78350F22', borderRadius: 6, paddingHorizontal: 7, paddingVertical: 2 },
-  proText: { color: '#F59E0B', fontSize: 10, fontWeight: '700' },
-  changeRoleBtn: { borderWidth: 1, borderColor: '#374151', borderRadius: 8, paddingVertical: 8, alignItems: 'center' },
+  roleText: { fontSize: 10, fontFamily: 'Inter_600SemiBold' },
+  proBadge: { backgroundColor: Colors.goldDim, borderRadius: 6, paddingHorizontal: 7, paddingVertical: 2 },
+  proText: { color: Colors.gold, fontSize: 10, fontFamily: 'Inter_600SemiBold' },
+  changeRoleBtn: { borderWidth: 1, borderColor: Colors.orange + '44', borderRadius: 8, paddingVertical: 8, alignItems: 'center' },
   btnDisabled: { opacity: 0.5 },
-  changeRoleText: { color: '#9B5DE5', fontSize: 13, fontWeight: '600' },
+  changeRoleText: { color: Colors.orange, fontSize: 13, fontFamily: 'Inter_600SemiBold' },
 });

@@ -35,7 +35,7 @@ export async function enqueueSessionAudioCleanup(
 ): Promise<void> {
   await getAudioCleanupQueue().add(
     'delete-session-audio',
-    { sessionId, keys },
+    { sessionId, ...(keys !== undefined && { keys }) },
     // Delay 30s — gives any in-flight presigned PUTs time to complete
     { delay: 30_000 },
   );

@@ -4,14 +4,14 @@ import { prisma } from '../../lib/prisma.js';
 import { env } from '../../lib/env.js';
 import { NotificationService } from '../../services/NotificationService.js';
 
-const stripe = new Stripe(env.STRIPE_SECRET_KEY, { apiVersion: '2024-06-20' });
+const stripe = new Stripe(env.STRIPE_SECRET_KEY, { apiVersion: '2024-04-10' });
 
 export const stripeWebhookRoute: FastifyPluginAsync = async (fastify) => {
   fastify.post(
     '/stripe',
     {
       config: { rawBody: true },
-      schema: { description: 'Stripe webhook receiver', tags: ['webhooks'] },
+      schema: {},
     },
     async (request, reply) => {
       const rawBody = (request as unknown as { rawBody: Buffer }).rawBody;

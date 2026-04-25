@@ -1,4 +1,5 @@
 import { View, Text, StyleSheet } from 'react-native';
+import { Colors } from '@/src/theme';
 
 interface Props {
   content: string;
@@ -15,15 +16,15 @@ function formatHHMMSS(isoDate: string): string {
 }
 
 function roleColor(role?: string): string {
-  if (!role) return '#9B5DE5';
-  if (role === 'CUSTOMER') return '#60A5FA';   // blue
-  return '#34D399';                             // green for DECODER/MENTOR/ADMIN
+  if (!role) return Colors.orange;
+  if (role === 'CUSTOMER') return '#60A5FA';
+  return Colors.gold;
 }
 
 function roleBubbleBg(role?: string): string {
-  if (!role) return '#1E293B';
-  if (role === 'CUSTOMER') return '#1E3A5F';   // dark blue
-  return '#0F3025';                             // dark green
+  if (!role) return Colors.navyCard;
+  if (role === 'CUSTOMER') return '#0F2940';
+  return '#0A2018';
 }
 
 export function TextBubble({ content, senderName, senderRole, isMe, createdAt, isSystem }: Props) {
@@ -35,7 +36,7 @@ export function TextBubble({ content, senderName, senderRole, isMe, createdAt, i
     );
   }
 
-  const bubbleBg = isMe ? '#9B5DE5' : roleBubbleBg(senderRole);
+  const bubbleBg = isMe ? Colors.orange : roleBubbleBg(senderRole);
   const nameColor = roleColor(senderRole);
 
   return (
@@ -70,17 +71,17 @@ const styles = StyleSheet.create({
   },
   bubbleMeRadius: { borderBottomRightRadius: 4 },
   bubbleThemRadius: { borderBottomLeftRadius: 4 },
-  content: { fontSize: 15, lineHeight: 22, color: '#FFF' },
-  timestamp: { fontSize: 11, color: '#555', marginTop: 2 },
+  content: { fontSize: 15, lineHeight: 22, color: Colors.white },
+  timestamp: { fontSize: 11, color: Colors.gray4, marginTop: 2 },
   timestampMe: { marginRight: 4 },
   timestampThem: { marginLeft: 4 },
   systemContainer: {
     alignSelf: 'center',
     paddingHorizontal: 12,
     paddingVertical: 4,
-    backgroundColor: '#1A1A2E',
+    backgroundColor: Colors.navyCard,
     borderRadius: 12,
     marginVertical: 8,
   },
-  systemText: { color: '#666', fontSize: 12 },
+  systemText: { color: Colors.gray4, fontSize: 12 },
 });

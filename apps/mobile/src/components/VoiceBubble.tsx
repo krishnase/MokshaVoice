@@ -1,4 +1,5 @@
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { Colors } from '@/src/theme';
 
 interface Props {
   messageId: string;
@@ -29,9 +30,9 @@ function formatHHMMSS(isoDate: string): string {
 }
 
 function roleColor(role?: string): string {
-  if (!role) return '#9B5DE5';
-  if (role === 'CUSTOMER') return '#60A5FA';          // blue
-  return '#34D399';                                    // green for DECODER/MENTOR/ADMIN
+  if (!role) return Colors.orange;
+  if (role === 'CUSTOMER') return '#60A5FA';
+  return Colors.gold;
 }
 
 export function VoiceBubble({
@@ -61,10 +62,10 @@ export function VoiceBubble({
   };
 
   const bubbleBg = isMe
-    ? '#9B5DE5'
+    ? Colors.orange
     : senderRole === 'CUSTOMER'
-      ? '#1E3A5F'   // dark blue for customer
-      : '#0F3025';  // dark green for decoder/admin
+      ? '#0F2940'
+      : '#0A2018';
 
   const trackBg = isMe ? 'rgba(255,255,255,0.2)' : 'rgba(255,255,255,0.12)';
   const barBg = isMe ? 'rgba(255,255,255,0.85)' : roleColor(senderRole) + 'CC';
@@ -77,7 +78,7 @@ export function VoiceBubble({
         </Text>
       )}
       {isDreamSubmission && (
-        <View style={[styles.dreamBadge, { backgroundColor: '#2A1A5E' }]}>
+        <View style={[styles.dreamBadge, { backgroundColor: Colors.navyCard }]}>
           <Text style={styles.dreamBadgeText}>Dream Submission</Text>
         </View>
       )}
@@ -123,7 +124,7 @@ const styles = StyleSheet.create({
     marginBottom: 4,
     alignSelf: 'flex-start',
   },
-  dreamBadgeText: { color: '#9B5DE5', fontSize: 11, fontWeight: '600' },
+  dreamBadgeText: { color: Colors.orange, fontSize: 11, fontWeight: '600' },
   bubble: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -141,7 +142,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  playIcon: { fontSize: 16, color: '#FFF' },
+  playIcon: { fontSize: 16, color: Colors.white },
   right: { flex: 1, gap: 4 },
   progressTrack: {
     height: 4,
@@ -154,7 +155,7 @@ const styles = StyleSheet.create({
   },
   timeRow: { flexDirection: 'row', justifyContent: 'space-between' },
   time: { color: 'rgba(255,255,255,0.7)', fontSize: 11 },
-  timestamp: { fontSize: 11, color: '#555', marginTop: 2 },
+  timestamp: { fontSize: 11, color: Colors.gray4, marginTop: 2 },
   timestampMe: { marginRight: 4 },
   timestampThem: { marginLeft: 4 },
 });

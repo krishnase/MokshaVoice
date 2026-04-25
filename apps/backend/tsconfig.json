@@ -3,13 +3,13 @@
   "compilerOptions": {
     "module": "NodeNext",
     "moduleResolution": "NodeNext",
-    "rootDir": "./src",
     "outDir": "./dist",
+    "rootDir": "../../",
     "baseUrl": ".",
     "paths": {
       "@mokshavoice/shared-types": ["../../packages/shared-types/src/index.ts"]
     }
   },
-  "include": ["src"],
+  "include": ["src", "../../packages/shared-types/src"],
   "exclude": ["node_modules", "dist"]
 }

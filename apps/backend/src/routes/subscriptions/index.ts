@@ -7,7 +7,7 @@ import { QuotaService } from '../../services/QuotaService.js';
 import { env } from '../../lib/env.js';
 import { requireAuth } from '../../plugins/requireAuth.js';
 
-const stripe = new Stripe(env.STRIPE_SECRET_KEY, { apiVersion: '2024-06-20' });
+const stripe = new Stripe(env.STRIPE_SECRET_KEY, { apiVersion: '2024-04-10' });
 
 const checkoutBody = z.object({
   priceId: z.string(),
@@ -75,7 +75,6 @@ export const subscriptionRoutes: FastifyPluginAsync = async (fastify) => {
       success_url: successUrl,
       cancel_url: cancelUrl,
       metadata: { userId },
-      customer_email: undefined,
       subscription_data: { metadata: { userId } },
     });
 

@@ -24,6 +24,7 @@ import { useAuthStore } from '@/src/stores/authStore';
 import { getSocket } from '@/src/lib/socket';
 import { api } from '@/src/lib/api';
 import type { MessageWithSender, SessionStatus } from '@mokshavoice/shared-types';
+import { Colors } from '@/src/theme';
 
 type SessionDetail = {
   id: string;
@@ -33,9 +34,9 @@ type SessionDetail = {
 };
 
 const STATUS_BAR: Record<SessionStatus, { label: string; color: string; bg: string }> = {
-  NEW:         { label: 'Waiting for a decoder…',        color: '#F59E0B', bg: '#78350F18' },
-  IN_PROGRESS: { label: 'Your decoder is working on this', color: '#3B82F6', bg: '#1E3A5F18' },
-  COMPLETED:   { label: '✓ Analysis complete',            color: '#10B981', bg: '#06402418' },
+  NEW:         { label: 'Waiting for a decoder…',          color: Colors.warning,  bg: Colors.goldDim + '44' },
+  IN_PROGRESS: { label: 'Your decoder is working on this', color: '#3B82F6', bg: '#0F2940' },
+  COMPLETED:   { label: '✓ Analysis complete',             color: '#10B981',  bg: '#064024' + '44' },
 };
 
 function maskPhone(phone: string) {
@@ -69,13 +70,11 @@ export default function SessionChat() {
   const [isSending, setIsSending] = useState(false);
   const typingTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Load session status
   useEffect(() => {
     if (!id) return;
     api.get<SessionDetail>(`/v1/sessions/${id}`).then(setSession).catch(() => null);
   }, [id]);
 
-  // Join socket room + listen for messages and status changes
   useEffect(() => {
     if (!id) return;
     const socket = getSocket();
@@ -240,7 +239,7 @@ export default function SessionChat() {
         keyboardVerticalOffset={0}
       >
         {isLoading ? (
-          <View style={styles.center}><ActivityIndicator color="#9B5DE5" size="large" /></View>
+          <View style={styles.center}><ActivityIndicator color={Colors.orange} size="large" /></View>
         ) : (
           <FlatList
             data={displayMessages}
@@ -249,7 +248,7 @@ export default function SessionChat() {
             inverted
             contentContainerStyle={styles.messageList}
             ListHeaderComponent={typingUserId ? <TypingIndicator /> : null}
-            ListFooterComponent={isFetchingNextPage ? <View style={styles.pageLoader}><ActivityIndicator color="#9B5DE5" size="small" /></View> : null}
+            ListFooterComponent={isFetchingNextPage ? <View style={styles.pageLoader}><ActivityIndicator color={Colors.orange} size="small" /></View> : null}
             onEndReached={() => hasNextPage && fetchNextPage()}
             onEndReachedThreshold={0.3}
           />
@@ -284,7 +283,7 @@ export default function SessionChat() {
                 <TextInput
                   style={styles.input}
                   placeholder={status === 'NEW' ? 'Waiting for a decoder to join…' : 'Reply to your decoder…'}
-                  placeholderTextColor="#555"
+                  placeholderTextColor={Colors.gray4}
                   value={textInput}
                   onChangeText={handleTextChange}
                   multiline
@@ -306,7 +305,7 @@ export default function SessionChat() {
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: '#0D0D0D' },
+  safe: { flex: 1, backgroundColor: Colors.navy },
   flex: { flex: 1 },
   topBar: {
     flexDirection: 'row',
@@ -315,55 +314,56 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#1A1A2E',
+    borderBottomColor: Colors.navyCard,
   },
   backBtn: { paddingVertical: 4, paddingRight: 8 },
-  backText: { color: '#9B5DE5', fontSize: 15 },
-  heading: { color: '#FFF', fontSize: 15, fontWeight: '600', flex: 1, textAlign: 'center' },
+  backText: { color: Colors.orange, fontSize: 15, fontFamily: 'Inter_500Medium' },
+  heading: { color: Colors.white, fontSize: 15, fontFamily: 'Poppins_600SemiBold', flex: 1, textAlign: 'center' },
   placeholder: { width: 60 },
   statusBar: {
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderBottomWidth: 1,
   },
-  statusLabel: { fontSize: 12, fontWeight: '600', textAlign: 'center' },
+  statusLabel: { fontSize: 12, fontFamily: 'Inter_600SemiBold', textAlign: 'center' },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   messageList: { paddingHorizontal: 16, paddingVertical: 12, gap: 2 },
   pageLoader: { paddingVertical: 12, alignItems: 'center' },
   inputArea: {
     borderTopWidth: 1,
-    borderTopColor: '#1A1A2E',
+    borderTopColor: Colors.navyCard,
     paddingHorizontal: 12,
     paddingVertical: 10,
-    backgroundColor: '#0D0D0D',
+    backgroundColor: Colors.navy,
   },
   textRow: { flexDirection: 'row', alignItems: 'flex-end', gap: 8 },
   input: {
     flex: 1,
-    backgroundColor: '#1A1A2E',
+    backgroundColor: Colors.navyCard,
     borderRadius: 20,
     paddingHorizontal: 14,
     paddingVertical: 10,
-    color: '#FFF',
+    color: Colors.white,
     fontSize: 15,
+    fontFamily: 'Inter_400Regular',
     maxHeight: 100,
   },
   sendBtn: {
     width: 38,
     height: 38,
     borderRadius: 19,
-    backgroundColor: '#9B5DE5',
+    backgroundColor: Colors.orange,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  sendIcon: { color: '#FFF', fontSize: 16 },
-  recordingError: { color: '#EF4444', fontSize: 12, paddingBottom: 4, paddingHorizontal: 4 },
+  sendIcon: { color: Colors.white, fontSize: 16 },
+  recordingError: { color: Colors.error, fontSize: 12, paddingBottom: 4, paddingHorizontal: 4 },
   completedBanner: {
     borderTopWidth: 1,
     borderTopColor: '#10B981' + '44',
-    backgroundColor: '#06402418',
+    backgroundColor: '#064024' + '44',
     padding: 16,
     alignItems: 'center',
   },
-  completedText: { color: '#10B981', fontSize: 13, textAlign: 'center', lineHeight: 18 },
+  completedText: { color: '#10B981', fontSize: 13, fontFamily: 'Inter_400Regular', textAlign: 'center', lineHeight: 18 },
 });

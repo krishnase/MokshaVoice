@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useCallback } from 'react';
 import {
   View,
   Text,
@@ -12,6 +12,7 @@ import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '@/src/lib/api';
+import { Colors } from '@/src/theme';
 
 type Stats = {
   totalUsers: number;
@@ -125,26 +126,26 @@ export default function AdminDashboard() {
 
       <ScrollView
         contentContainerStyle={styles.scroll}
-        refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={handleRefresh} tintColor="#9B5DE5" />}
+        refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={handleRefresh} tintColor={Colors.orange} />}
       >
         {/* Stats grid */}
         {statsQuery.isLoading ? (
-          <View style={styles.loadingBox}><ActivityIndicator color="#9B5DE5" /></View>
+          <View style={styles.loadingBox}><ActivityIndicator color={Colors.orange} /></View>
         ) : stats ? (
           <>
             <Text style={styles.sectionTitle}>Overview</Text>
             <View style={styles.statsGrid}>
-              <StatCard label="Total Users" value={stats.totalUsers} sub={`+${stats.usersToday} today`} color="#9B5DE5" />
+              <StatCard label="Total Users" value={stats.totalUsers} sub={`+${stats.usersToday} today`} color={Colors.orange} />
               <StatCard label="Dreams Submitted" value={stats.totalDreams} sub={`+${stats.dreamsToday} today`} color="#3B82F6" />
-              <StatCard label="Pending Analysis" value={stats.pendingDreams} color="#F59E0B" />
-              <StatCard label="In Progress" value={stats.inProgressDreams} color="#8B5CF6" />
+              <StatCard label="Pending Analysis" value={stats.pendingDreams} color={Colors.warning} />
+              <StatCard label="In Progress" value={stats.inProgressDreams} color={Colors.gold} />
               <StatCard label="Completed" value={stats.completedDreams} color="#10B981" />
-              <StatCard label="Decoders" value={stats.totalDecoders} color="#EC4899" />
+              <StatCard label="Decoders" value={stats.totalDecoders} color={Colors.pink} />
             </View>
           </>
         ) : null}
 
-        {/* Pending dreams — needs attention */}
+        {/* Pending dreams */}
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>Needs Attention</Text>
           <TouchableOpacity onPress={() => router.push('/(app)/(admin)/dreams')}>
@@ -152,7 +153,7 @@ export default function AdminDashboard() {
           </TouchableOpacity>
         </View>
         {pendingQuery.isLoading ? (
-          <View style={styles.loadingBox}><ActivityIndicator color="#9B5DE5" size="small" /></View>
+          <View style={styles.loadingBox}><ActivityIndicator color={Colors.orange} size="small" /></View>
         ) : (pendingQuery.data?.data ?? []).length === 0 ? (
           <View style={styles.emptyRow}>
             <Text style={styles.emptyText}>✓ No pending dreams</Text>
@@ -185,7 +186,7 @@ export default function AdminDashboard() {
           </TouchableOpacity>
         </View>
         {recentUsersQuery.isLoading ? (
-          <View style={styles.loadingBox}><ActivityIndicator color="#9B5DE5" size="small" /></View>
+          <View style={styles.loadingBox}><ActivityIndicator color={Colors.orange} size="small" /></View>
         ) : (
           (recentUsersQuery.data?.data ?? []).map((u) => (
             <View key={u.id} style={styles.listRow}>
@@ -225,59 +226,61 @@ export default function AdminDashboard() {
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: '#0D0D0D' },
+  safe: { flex: 1, backgroundColor: Colors.navy },
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', paddingHorizontal: 20, paddingTop: 16, paddingBottom: 8 },
-  title: { color: '#FFF', fontSize: 26, fontWeight: '700' },
-  updated: { color: '#6B7280', fontSize: 12, marginTop: 2 },
+  title: { color: Colors.white, fontSize: 26, fontFamily: 'Poppins_700Bold' },
+  updated: { color: Colors.gray4, fontSize: 12, fontFamily: 'Inter_400Regular', marginTop: 2 },
   headerRight: { flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 4 },
-  recordBtn: { backgroundColor: '#9B5DE5', borderRadius: 8, paddingHorizontal: 12, paddingVertical: 6 },
-  recordBtnText: { color: '#FFF', fontSize: 13, fontWeight: '700' },
-  refreshIcon: { color: '#9B5DE5', fontSize: 22 },
+  recordBtn: { backgroundColor: Colors.orange, borderRadius: 8, paddingHorizontal: 12, paddingVertical: 6 },
+  recordBtnText: { color: Colors.white, fontSize: 13, fontFamily: 'Inter_600SemiBold' },
+  refreshIcon: { color: Colors.orange, fontSize: 22 },
   scroll: { padding: 16, gap: 4, paddingBottom: 40 },
   loadingBox: { paddingVertical: 20, alignItems: 'center' },
 
-  sectionTitle: { color: '#D1D5DB', fontSize: 14, fontWeight: '600', marginTop: 16, marginBottom: 8 },
+  sectionTitle: { color: Colors.gray3, fontSize: 14, fontFamily: 'Inter_600SemiBold', marginTop: 16, marginBottom: 8 },
   sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 16, marginBottom: 8 },
-  seeAll: { color: '#9B5DE5', fontSize: 13 },
+  seeAll: { color: Colors.orange, fontSize: 13, fontFamily: 'Inter_400Regular' },
 
   statsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
   statCard: {
     width: '47%',
-    backgroundColor: '#1A1A2E',
+    backgroundColor: Colors.navyCard,
     borderRadius: 12,
     padding: 14,
     borderTopWidth: 3,
     gap: 2,
   },
-  statValue: { fontSize: 28, fontWeight: '700' },
-  statLabel: { color: '#9CA3AF', fontSize: 12 },
-  statSub: { color: '#6B7280', fontSize: 11 },
+  statValue: { fontSize: 28, fontFamily: 'Poppins_700Bold' },
+  statLabel: { color: Colors.gray3, fontSize: 12, fontFamily: 'Inter_400Regular' },
+  statSub: { color: Colors.gray4, fontSize: 11, fontFamily: 'Inter_400Regular' },
 
   listRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#1A1A2E',
+    backgroundColor: Colors.navyCard,
     borderRadius: 10,
     paddingHorizontal: 14,
     paddingVertical: 12,
     marginBottom: 6,
     gap: 8,
+    borderWidth: 1,
+    borderColor: Colors.gold + '18',
   },
-  rowPhone: { color: '#FFF', fontSize: 14, fontWeight: '500' },
-  rowSub: { color: '#6B7280', fontSize: 12, marginTop: 2 },
-  rowChevron: { color: '#4B5563', fontSize: 20 },
+  rowPhone: { color: Colors.white, fontSize: 14, fontFamily: 'Inter_500Medium' },
+  rowSub: { color: Colors.gray4, fontSize: 12, fontFamily: 'Inter_400Regular', marginTop: 2 },
+  rowChevron: { color: Colors.gray4, fontSize: 20 },
   emptyRow: { paddingVertical: 14, alignItems: 'center' },
-  emptyText: { color: '#10B981', fontSize: 13 },
+  emptyText: { color: '#10B981', fontSize: 13, fontFamily: 'Inter_400Regular' },
 
-  roleBadge: { backgroundColor: '#374151', borderRadius: 6, paddingHorizontal: 7, paddingVertical: 3 },
-  roleBadgeSpecial: { backgroundColor: '#2D1B69' },
-  roleText: { color: '#9CA3AF', fontSize: 10, fontWeight: '700' },
-  roleTextSpecial: { color: '#C4B5FD' },
-  premiumBadge: { backgroundColor: '#78350F22', borderRadius: 6, paddingHorizontal: 7, paddingVertical: 3 },
-  premiumText: { color: '#F59E0B', fontSize: 10, fontWeight: '700' },
+  roleBadge: { backgroundColor: Colors.navyLight, borderRadius: 6, paddingHorizontal: 7, paddingVertical: 3 },
+  roleBadgeSpecial: { backgroundColor: Colors.orangeDim },
+  roleText: { color: Colors.gray3, fontSize: 10, fontFamily: 'Inter_600SemiBold' },
+  roleTextSpecial: { color: Colors.orangeLight },
+  premiumBadge: { backgroundColor: Colors.goldDim, borderRadius: 6, paddingHorizontal: 7, paddingVertical: 3 },
+  premiumText: { color: Colors.gold, fontSize: 10, fontFamily: 'Inter_600SemiBold' },
 
   actionsGrid: { flexDirection: 'row', gap: 10, marginTop: 4 },
-  actionBtn: { flex: 1, backgroundColor: '#1A1A2E', borderRadius: 12, padding: 16, alignItems: 'center', gap: 8 },
+  actionBtn: { flex: 1, backgroundColor: Colors.navyCard, borderRadius: 12, padding: 16, alignItems: 'center', gap: 8, borderWidth: 1, borderColor: Colors.gold + '22' },
   actionIcon: { fontSize: 28 },
-  actionLabel: { color: '#D1D5DB', fontSize: 12, fontWeight: '600', textAlign: 'center' },
+  actionLabel: { color: Colors.gray3, fontSize: 12, fontFamily: 'Inter_600SemiBold', textAlign: 'center' },
 });

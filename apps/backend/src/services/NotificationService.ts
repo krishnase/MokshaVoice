@@ -21,7 +21,7 @@ export class NotificationService {
       await getMessaging().send({
         token: user.fcmToken,
         notification: { title: payload.title, body: payload.body },
-        data: payload.data,
+        ...(payload.data !== undefined && { data: payload.data }),
         apns: { payload: { aps: { sound: 'default', badge: 1 } } },
         android: { priority: 'high', notification: { sound: 'default' } },
       });
@@ -30,7 +30,7 @@ export class NotificationService {
       console.warn(`FCM send failed for user ${userId}:`, err);
     }
 
-    await NotificationService.persist(userId, payload.data?.['type'] as NotificationType, payload);
+    await NotificationService.persist(userId, (payload.data?.['type'] ?? 'GENERIC') as NotificationType, payload as unknown as Record<string, unknown>);
   }
 
   static async persist(
@@ -39,7 +39,7 @@ export class NotificationService {
     payload: Record<string, unknown>,
   ): Promise<void> {
     await prisma.notification.create({
-      data: { userId, type, payload, read: false },
+      data: { userId, type, payload: payload as never, read: false },
     });
   }
 }

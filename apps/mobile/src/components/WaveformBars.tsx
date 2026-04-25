@@ -1,5 +1,6 @@
 import { useEffect, useRef, useMemo } from 'react';
 import { View, Animated, StyleSheet } from 'react-native';
+import { Colors } from '@/src/theme';
 
 const BAR_COUNT = 20;
 const MIN_H = 4;
@@ -12,7 +13,7 @@ interface Props {
   gap?: number;
 }
 
-export function WaveformBars({ isActive, color = '#9B5DE5', barWidth = 3, gap = 3 }: Props) {
+export function WaveformBars({ isActive, color = Colors.orange, barWidth = 3, gap = 3 }: Props) {
   const bars = useMemo(
     () => Array.from({ length: BAR_COUNT }, () => new Animated.Value(MIN_H)),
     [],

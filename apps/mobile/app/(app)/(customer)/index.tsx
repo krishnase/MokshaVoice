@@ -14,6 +14,7 @@ import { SessionCard } from '@/src/components/SessionCard';
 import { useSessions } from '@/src/hooks/useSessions';
 import { useAuthStore } from '@/src/stores/authStore';
 import type { SessionWithMeta } from '@mokshavoice/shared-types';
+import { Colors } from '@/src/theme';
 
 export default function DreamList() {
   const router = useRouter();
@@ -51,7 +52,7 @@ export default function DreamList() {
     if (!isFetchingNextPage) return null;
     return (
       <View style={styles.footerLoader}>
-        <ActivityIndicator color="#9B5DE5" />
+        <ActivityIndicator color={Colors.orange} />
       </View>
     );
   };
@@ -90,7 +91,7 @@ export default function DreamList() {
 
       {isLoading ? (
         <View style={styles.center}>
-          <ActivityIndicator color="#9B5DE5" size="large" />
+          <ActivityIndicator color={Colors.orange} size="large" />
         </View>
       ) : (
         <FlatList
@@ -103,7 +104,7 @@ export default function DreamList() {
             <RefreshControl
               refreshing={isRefetching}
               onRefresh={refetch}
-              tintColor="#9B5DE5"
+              tintColor={Colors.orange}
             />
           }
           onEndReached={() => hasNextPage && fetchNextPage()}
@@ -142,7 +143,7 @@ export default function DreamList() {
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: '#0D0D0D' },
+  safe: { flex: 1, backgroundColor: Colors.navy },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -151,8 +152,8 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
   },
   backBtn: { minWidth: 60 },
-  backText: { color: '#9B5DE5', fontSize: 15 },
-  title: { color: '#FFF', fontSize: 28, fontWeight: '700', flex: 1, textAlign: 'center' },
+  backText: { color: Colors.orange, fontSize: 15, fontFamily: 'Inter_500Medium' },
+  title: { color: Colors.white, fontSize: 28, fontFamily: 'Poppins_700Bold', flex: 1, textAlign: 'center' },
   titleSmall: { fontSize: 20, textAlign: 'center' },
   notifBtn: { minWidth: 60, alignItems: 'flex-end', padding: 4 },
   notifIcon: { fontSize: 22 },
@@ -161,22 +162,22 @@ const styles = StyleSheet.create({
   emptyContainer: { flex: 1 },
   empty: { flex: 1, justifyContent: 'center', alignItems: 'center', gap: 12, padding: 40 },
   emptyIcon: { fontSize: 56 },
-  emptyTitle: { color: '#FFF', fontSize: 22, fontWeight: '700', textAlign: 'center' },
-  emptySubtitle: { color: '#888', fontSize: 15, textAlign: 'center', lineHeight: 22 },
+  emptyTitle: { color: Colors.white, fontSize: 22, fontFamily: 'Poppins_700Bold', textAlign: 'center' },
+  emptySubtitle: { color: Colors.gray3, fontSize: 15, fontFamily: 'Inter_400Regular', textAlign: 'center', lineHeight: 22 },
   footerLoader: { paddingVertical: 20, alignItems: 'center' },
   tabBar: {
     flexDirection: 'row',
-    backgroundColor: '#111',
+    backgroundColor: Colors.navyCard,
     borderTopWidth: 1,
-    borderTopColor: '#222',
+    borderTopColor: Colors.gold + '22',
     paddingBottom: 4,
   },
   tab: { flex: 1, alignItems: 'center', paddingVertical: 10, gap: 2 },
   tabActive: { flex: 1, alignItems: 'center', paddingVertical: 10, gap: 2 },
   tabIcon: { fontSize: 22 },
   tabIconActive: { fontSize: 22 },
-  tabLabel: { color: '#555', fontSize: 11 },
-  tabLabelActive: { color: '#9B5DE5', fontSize: 11, fontWeight: '600' },
+  tabLabel: { color: Colors.gray4, fontSize: 11, fontFamily: 'Inter_400Regular' },
+  tabLabelActive: { color: Colors.orange, fontSize: 11, fontFamily: 'Inter_600SemiBold' },
   fabNonCustomer: { bottom: 24 },
   fab: {
     position: 'absolute',
@@ -185,14 +186,14 @@ const styles = StyleSheet.create({
     width: 58,
     height: 58,
     borderRadius: 29,
-    backgroundColor: '#9B5DE5',
+    backgroundColor: Colors.orange,
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: '#9B5DE5',
+    shadowColor: Colors.orange,
     shadowOpacity: 0.5,
     shadowRadius: 12,
     shadowOffset: { width: 0, height: 4 },
     elevation: 8,
   },
-  fabIcon: { color: '#FFF', fontSize: 28, lineHeight: 30 },
+  fabIcon: { color: Colors.white, fontSize: 28, lineHeight: 30 },
 });

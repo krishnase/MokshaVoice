@@ -1,5 +1,6 @@
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import type { SessionWithMeta, SessionStatus } from '@mokshavoice/shared-types';
+import { Colors } from '@/src/theme';
 
 interface Props {
   session: SessionWithMeta;
@@ -22,7 +23,7 @@ function lastMessagePreview(session: SessionWithMeta): string {
 }
 
 const STATUS_COLORS: Record<SessionStatus, string> = {
-  NEW: '#9B5DE5',
+  NEW: Colors.orange,
   IN_PROGRESS: '#FFB703',
   COMPLETED: '#06D6A0',
 };
@@ -70,12 +71,14 @@ export function SessionCard({ session, dreamNumber, onPress }: Props) {
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: '#1A1A2E',
+    backgroundColor: Colors.navyCard,
     borderRadius: 14,
     padding: 16,
     marginHorizontal: 16,
     marginVertical: 6,
     gap: 8,
+    borderWidth: 1,
+    borderColor: Colors.gold + '22',
   },
   header: {
     flexDirection: 'row',
@@ -92,17 +95,13 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     flex: 1,
   },
-  time: {
-    fontSize: 12,
-    color: '#666',
-  },
   title: {
-    color: '#FFF',
+    color: Colors.white,
     fontSize: 15,
     fontWeight: '600',
   },
   preview: {
-    color: '#888',
+    color: Colors.gray3,
     fontSize: 13,
     lineHeight: 19,
   },
@@ -111,12 +110,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
   },
-  meta: { color: '#555', fontSize: 12 },
+  meta: { color: Colors.gray4, fontSize: 12 },
   queuedBadge: {
-    backgroundColor: '#3A2A00',
+    backgroundColor: Colors.goldDim,
     borderRadius: 4,
     paddingHorizontal: 6,
     paddingVertical: 2,
   },
-  queuedText: { color: '#FFB703', fontSize: 11, fontWeight: '600' },
+  queuedText: { color: Colors.gold, fontSize: 11, fontWeight: '600' },
 });

@@ -13,6 +13,8 @@
     "lint": "eslint . --ext .ts,.tsx"
   },
   "dependencies": {
+    "@expo-google-fonts/inter": "^0.4.2",
+    "@expo-google-fonts/poppins": "^0.4.1",
     "@mokshavoice/shared-types": "workspace:*",
     "@react-native-async-storage/async-storage": "2.1.2",
     "@react-native-firebase/app": "^24.0.0",

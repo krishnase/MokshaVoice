@@ -12,6 +12,7 @@ import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useInfiniteQuery } from '@tanstack/react-query';
 import { api } from '@/src/lib/api';
+import { Colors } from '@/src/theme';
 
 type SessionStatus = 'NEW' | 'IN_PROGRESS' | 'COMPLETED';
 type Customer = { id: string; phone: string };
@@ -36,7 +37,7 @@ const FILTERS = [
 ];
 
 const STATUS_COLOR: Record<SessionStatus, string> = {
-  NEW: '#F59E0B',
+  NEW: Colors.warning,
   IN_PROGRESS: '#3B82F6',
   COMPLETED: '#10B981',
 };
@@ -136,17 +137,17 @@ export default function AdminDreams() {
       </View>
 
       {query.isLoading ? (
-        <View style={styles.center}><ActivityIndicator color="#9B5DE5" size="large" /></View>
+        <View style={styles.center}><ActivityIndicator color={Colors.orange} size="large" /></View>
       ) : (
         <FlatList
           data={sessions}
           keyExtractor={(item) => item.id}
           renderItem={renderItem}
           contentContainerStyle={styles.list}
-          refreshControl={<RefreshControl refreshing={query.isRefetching} onRefresh={() => query.refetch()} tintColor="#9B5DE5" />}
+          refreshControl={<RefreshControl refreshing={query.isRefetching} onRefresh={() => query.refetch()} tintColor={Colors.orange} />}
           onEndReached={() => query.hasNextPage && query.fetchNextPage()}
           onEndReachedThreshold={0.3}
-          ListFooterComponent={query.isFetchingNextPage ? <ActivityIndicator color="#9B5DE5" style={{ marginVertical: 12 }} /> : null}
+          ListFooterComponent={query.isFetchingNextPage ? <ActivityIndicator color={Colors.orange} style={{ marginVertical: 12 }} /> : null}
           ListEmptyComponent={<View style={styles.empty}><Text style={styles.emptyText}>No dreams found</Text></View>}
         />
       )}
@@ -155,30 +156,30 @@ export default function AdminDreams() {
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: '#0D0D0D' },
+  safe: { flex: 1, backgroundColor: Colors.navy },
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingVertical: 12 },
   backBtn: { paddingRight: 8 },
-  backText: { color: '#9B5DE5', fontSize: 15 },
-  title: { color: '#FFF', fontSize: 18, fontWeight: '700' },
+  backText: { color: Colors.orange, fontSize: 15, fontFamily: 'Inter_500Medium' },
+  title: { color: Colors.white, fontSize: 18, fontFamily: 'Poppins_600SemiBold' },
   filterRow: { flexDirection: 'row', paddingHorizontal: 12, gap: 6, marginBottom: 8 },
-  filterPill: { paddingHorizontal: 14, paddingVertical: 6, borderRadius: 16, backgroundColor: '#1A1A2E', borderWidth: 1, borderColor: '#374151' },
-  filterPillActive: { backgroundColor: '#2D1B69', borderColor: '#9B5DE5' },
-  filterText: { color: '#9CA3AF', fontSize: 13, fontWeight: '500' },
-  filterTextActive: { color: '#C4B5FD' },
+  filterPill: { paddingHorizontal: 14, paddingVertical: 6, borderRadius: 16, backgroundColor: Colors.navyCard, borderWidth: 1, borderColor: Colors.gold + '33' },
+  filterPillActive: { backgroundColor: Colors.orangeDim, borderColor: Colors.orange },
+  filterText: { color: Colors.gray3, fontSize: 13, fontFamily: 'Inter_500Medium' },
+  filterTextActive: { color: Colors.orangeLight },
   list: { paddingBottom: 40 },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   empty: { paddingTop: 60, alignItems: 'center' },
-  emptyText: { color: '#6B7280', fontSize: 14 },
-  card: { backgroundColor: '#1A1A2E', borderRadius: 12, marginHorizontal: 16, marginVertical: 5, padding: 14, gap: 8 },
+  emptyText: { color: Colors.gray4, fontSize: 14, fontFamily: 'Inter_400Regular' },
+  card: { backgroundColor: Colors.navyCard, borderRadius: 12, marginHorizontal: 16, marginVertical: 5, padding: 14, gap: 8, borderWidth: 1, borderColor: Colors.gold + '18' },
   cardTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  dreamNum: { color: '#FFF', fontSize: 15, fontWeight: '600' },
+  dreamNum: { color: Colors.white, fontSize: 15, fontFamily: 'Inter_600SemiBold' },
   statusBadge: { borderRadius: 6, borderWidth: 1, paddingHorizontal: 8, paddingVertical: 3 },
-  statusText: { fontSize: 11, fontWeight: '700' },
+  statusText: { fontSize: 11, fontFamily: 'Inter_600SemiBold' },
   cardRow: { flexDirection: 'row', gap: 8 },
-  label: { color: '#6B7280', fontSize: 12, width: 60 },
-  value: { color: '#D1D5DB', fontSize: 12, flex: 1 },
+  label: { color: Colors.gray4, fontSize: 12, fontFamily: 'Inter_400Regular', width: 60 },
+  value: { color: Colors.gray3, fontSize: 12, fontFamily: 'Inter_400Regular', flex: 1 },
   cardFooter: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, alignItems: 'center' },
-  meta: { color: '#6B7280', fontSize: 11 },
-  proBadge: { backgroundColor: '#78350F22', borderRadius: 6, paddingHorizontal: 7, paddingVertical: 2 },
-  proText: { color: '#F59E0B', fontSize: 10, fontWeight: '700' },
+  meta: { color: Colors.gray4, fontSize: 11, fontFamily: 'Inter_400Regular' },
+  proBadge: { backgroundColor: Colors.goldDim, borderRadius: 6, paddingHorizontal: 7, paddingVertical: 2 },
+  proText: { color: Colors.gold, fontSize: 10, fontFamily: 'Inter_600SemiBold' },
 });

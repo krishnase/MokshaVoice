@@ -7,6 +7,7 @@ import {
   StyleSheet,
 } from 'react-native';
 import { WaveformBars } from './WaveformBars';
+import { Colors } from '@/src/theme';
 
 interface Props {
   isRecording: boolean;
@@ -39,7 +40,6 @@ export function HoldToRecord({
   const dx = useRef(0);
   const isCancelling = useRef(false);
 
-  // Refs so PanResponder callbacks always see latest prop values
   const isDisabledRef = useRef(isDisabled);
   const onHoldStartRef = useRef(onHoldStart);
   const onHoldEndRef = useRef(onHoldEnd);
@@ -146,10 +146,10 @@ const styles = StyleSheet.create({
     width: 80,
     height: 80,
     borderRadius: 40,
-    backgroundColor: '#9B5DE5',
+    backgroundColor: Colors.orange,
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: '#9B5DE5',
+    shadowColor: Colors.orange,
     shadowOpacity: 0.5,
     shadowRadius: 16,
     shadowOffset: { width: 0, height: 4 },
@@ -162,27 +162,27 @@ const styles = StyleSheet.create({
     shadowRadius: 6,
   },
   buttonRecording: {
-    backgroundColor: '#EF476F',
-    shadowColor: '#EF476F',
+    backgroundColor: Colors.error,
+    shadowColor: Colors.error,
   },
   buttonDisabled: {
-    backgroundColor: '#333',
+    backgroundColor: Colors.navyCard,
     shadowOpacity: 0,
     elevation: 0,
   },
   buttonCancel: {
-    backgroundColor: '#555',
+    backgroundColor: Colors.gray4,
   },
   icon: { fontSize: 32 },
   iconCompact: { fontSize: 18 },
-  hint: { color: '#888', fontSize: 13 },
-  slideHint: { color: '#555', fontSize: 12 },
+  hint: { color: Colors.gray3, fontSize: 13 },
+  slideHint: { color: Colors.gray4, fontSize: 12 },
   recordingHint: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
     minHeight: 32,
   },
-  duration: { color: '#EF476F', fontSize: 16, fontWeight: '700', fontVariant: ['tabular-nums'] },
-  cancelHint: { color: '#EF476F', fontSize: 13, fontWeight: '600' },
+  duration: { color: Colors.error, fontSize: 16, fontWeight: '700', fontVariant: ['tabular-nums'] },
+  cancelHint: { color: Colors.error, fontSize: 13, fontWeight: '600' },
 });

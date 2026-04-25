@@ -1,7 +1,8 @@
-import { View, Text, TouchableOpacity, Alert, StyleSheet } from 'react-native';
+import { View, Text, TouchableOpacity, Alert, StyleSheet, Image } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuthStore } from '@/src/stores/authStore';
+import { Colors } from '@/src/theme';
 
 type ModeCard = {
   icon: string;
@@ -38,29 +39,30 @@ export default function ModeSelect() {
       title: 'Customer',
       subtitle: 'Submit and track your own dreams',
       route: '/(app)/(customer)',
-      color: '#9B5DE5',
+      color: Colors.orange,
     },
     ...(isDecoder ? [{
       icon: '🔍',
       title: 'Decoder',
       subtitle: 'View and interpret the dream queue',
       route: '/(app)/(decoder)/queue',
-      color: '#3B82F6',
+      color: Colors.gold,
     }] : []),
     ...(isAdmin ? [{
       icon: '⚙️',
       title: 'Admin',
       subtitle: 'Manage users and platform settings',
       route: '/(app)/(admin)/dashboard',
-      color: '#10B981',
+      color: Colors.green,
     }] : []),
   ];
 
   return (
     <SafeAreaView style={styles.safe}>
       <View style={styles.container}>
-        <Text style={styles.heading}>Choose your mode</Text>
-        <Text style={styles.sub}>You can switch between modes at any time</Text>
+        <Image source={require('@/assets/icon.png')} style={styles.logo} resizeMode="contain" />
+        <Text style={styles.heading}>Moksha<Text style={styles.headingAccent}>Voice</Text></Text>
+        <Text style={styles.sub}>Choose your path</Text>
 
         <View style={styles.cards}>
           {cards.map((card) => (
@@ -89,15 +91,17 @@ export default function ModeSelect() {
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: '#0D0D0D' },
-  container: { flex: 1, justifyContent: 'center', paddingHorizontal: 24, gap: 12 },
-  heading: { color: '#FFF', fontSize: 28, fontWeight: '700', textAlign: 'center', marginBottom: 4 },
-  sub: { color: '#6B7280', fontSize: 14, textAlign: 'center', marginBottom: 24 },
+  safe: { flex: 1, backgroundColor: Colors.navy },
+  container: { flex: 1, justifyContent: 'center', paddingHorizontal: 24, gap: 12, alignItems: 'stretch' },
+  logo: { width: 90, height: 90, borderRadius: 20, alignSelf: 'center', marginBottom: 4 },
+  heading: { fontFamily: 'Poppins_700Bold', color: Colors.white, fontSize: 28, textAlign: 'center', marginBottom: 2 },
+  headingAccent: { color: Colors.orange },
+  sub: { fontFamily: 'Inter_400Regular', color: Colors.gold, fontSize: 13, textAlign: 'center', letterSpacing: 2, marginBottom: 16 },
   cards: { gap: 14 },
   card: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#111827',
+    backgroundColor: Colors.navyCard,
     borderRadius: 16,
     borderWidth: 1,
     padding: 20,
@@ -105,15 +109,17 @@ const styles = StyleSheet.create({
   },
   cardIcon: { fontSize: 32 },
   cardText: { flex: 1, gap: 2 },
-  cardTitle: { fontSize: 18, fontWeight: '700' },
-  cardSubtitle: { color: '#9CA3AF', fontSize: 13 },
-  arrow: { fontSize: 28, fontWeight: '300' },
+  cardTitle: { fontFamily: 'Poppins_600SemiBold', fontSize: 18 },
+  cardSubtitle: { fontFamily: 'Inter_400Regular', color: Colors.gray3, fontSize: 13 },
+  arrow: { fontSize: 28 },
   signOutBtn: {
     marginTop: 8,
     paddingVertical: 14,
     alignItems: 'center',
     borderRadius: 12,
-    backgroundColor: '#1A1A2E',
+    backgroundColor: Colors.navyCard,
+    borderWidth: 1,
+    borderColor: Colors.error + '33',
   },
-  signOutText: { color: '#EF476F', fontSize: 15, fontWeight: '600' },
+  signOutText: { fontFamily: 'Inter_600SemiBold', color: Colors.error, fontSize: 15 },
 });
