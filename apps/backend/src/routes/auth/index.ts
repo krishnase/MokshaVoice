@@ -8,6 +8,7 @@ const sendOtpBody = z.object({ phone: z.string() });
 const verifyOtpBody = z.object({ phone: z.string(), firebaseIdToken: z.string() });
 const refreshBody = z.object({ refreshToken: z.string() });
 const fcmTokenBody = z.object({ token: z.string().min(1) });
+const updateProfileBody = z.object({ fullName: z.string().trim().min(1).max(100) });
 
 export const authRoutes: FastifyPluginAsync = async (fastify) => {
   fastify.post('/send-otp', async (request, reply) => {
@@ -36,5 +37,16 @@ export const authRoutes: FastifyPluginAsync = async (fastify) => {
       data: { fcmToken: token },
     });
     return reply.status(200).send({ ok: true });
+  });
+
+  // PUT /auth/profile — set full name after first login
+  fastify.put('/profile', { onRequest: [requireAuth(fastify)] }, async (request, reply) => {
+    const { fullName } = updateProfileBody.parse(request.body);
+    const user = await prisma.user.update({
+      where: { id: request.user.sub },
+      data: { fullName },
+      include: { subscription: true },
+    });
+    return reply.status(200).send({ user });
   });
 };

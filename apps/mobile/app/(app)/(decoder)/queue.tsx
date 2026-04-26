@@ -14,7 +14,14 @@ import { useQuery } from '@tanstack/react-query';
 import { api } from '@/src/lib/api';
 import { Colors } from '@/src/theme';
 
-type Customer = { id: string; phone: string; displayName: string | null };
+type CustomerPlan = 'FREE' | 'STARTER' | 'GROWTH' | 'PREMIUM';
+type Customer = {
+  id: string;
+  phone: string;
+  fullName: string | null;
+  displayName: string | null;
+  subscription: { plan: CustomerPlan } | null;
+};
 type SubmissionMessage = { type: string; content: string | null; audioDurationS: number | null };
 
 type QueueSession = {
@@ -75,15 +82,32 @@ const STATUS_COLOR: Record<FilterStatus, string> = {
   COMPLETED: '#10B981',
 };
 
+const PLAN_BADGE: Record<CustomerPlan, { label: string; color: string }> = {
+  FREE:    { label: 'Starter', color: Colors.gray3 },
+  STARTER: { label: 'Starter', color: Colors.gray3 },
+  GROWTH:  { label: 'Growth',  color: '#3B82F6' },
+  PREMIUM: { label: 'Premium', color: Colors.gold },
+};
+
 function QueueCard({ session, onPress }: { session: QueueSession; onPress: () => void }) {
   const type = dreamType(session.messages);
   const dur = totalDuration(session.messages);
   const statusColor = STATUS_COLOR[session.status];
+  const plan = session.customer.subscription?.plan ?? 'STARTER';
+  const planBadge = PLAN_BADGE[plan] ?? PLAN_BADGE.STARTER;
+  const customerLabel = session.customer.fullName
+    ?? session.customer.displayName
+    ?? maskPhone(session.customer.phone);
 
   return (
     <TouchableOpacity style={styles.card} onPress={onPress} activeOpacity={0.75}>
       <View style={styles.cardHeader}>
-        <Text style={styles.phone}>{maskPhone(session.customer.phone)}</Text>
+        <View style={styles.customerRow}>
+          <Text style={styles.phone}>{customerLabel}</Text>
+          <View style={[styles.planBadge, { backgroundColor: planBadge.color + '22', borderColor: planBadge.color }]}>
+            <Text style={[styles.planBadgeText, { color: planBadge.color }]}>{planBadge.label}</Text>
+          </View>
+        </View>
         <View style={[styles.statusBadge, { backgroundColor: statusColor + '22', borderColor: statusColor }]}>
           <Text style={[styles.statusText, { color: statusColor }]}>
             {session.status === 'NEW' ? 'Pending' : session.status === 'IN_PROGRESS' ? 'In Progress' : 'Done'}
@@ -96,11 +120,6 @@ function QueueCard({ session, onPress }: { session: QueueSession; onPress: () =>
           <Text style={styles.typeText}>{type}</Text>
         </View>
         {dur && <Text style={styles.dur}>🎙 {dur}</Text>}
-        {session.priority === 1 && (
-          <View style={styles.priorityBadge}>
-            <Text style={styles.priorityText}>Premium</Text>
-          </View>
-        )}
       </View>
 
       <View style={styles.cardFooter}>
@@ -297,8 +316,11 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: Colors.gold + '22',
   },
-  cardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  cardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8 },
+  customerRow: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' },
   phone: { color: Colors.white, fontSize: 15, fontFamily: 'Inter_600SemiBold' },
+  planBadge: { borderRadius: 6, borderWidth: 1, paddingHorizontal: 7, paddingVertical: 2 },
+  planBadgeText: { fontSize: 10, fontFamily: 'Inter_600SemiBold' },
   statusBadge: {
     borderRadius: 6,
     borderWidth: 1,
@@ -310,8 +332,6 @@ const styles = StyleSheet.create({
   typeBadge: { backgroundColor: Colors.navyLight, borderRadius: 6, paddingHorizontal: 8, paddingVertical: 3 },
   typeText: { color: Colors.gray3, fontSize: 12, fontFamily: 'Inter_400Regular' },
   dur: { color: Colors.gray3, fontSize: 12 },
-  priorityBadge: { backgroundColor: Colors.goldDim, borderRadius: 6, paddingHorizontal: 8, paddingVertical: 3 },
-  priorityText: { color: Colors.gold, fontSize: 11, fontFamily: 'Inter_600SemiBold' },
   cardFooter: { flexDirection: 'row', justifyContent: 'space-between' },
   time: { color: Colors.gray4, fontSize: 12 },
   msgCount: { color: Colors.gray4, fontSize: 12 },

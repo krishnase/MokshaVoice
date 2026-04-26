@@ -28,7 +28,7 @@ export const subscriptionRoutes: FastifyPluginAsync = async (fastify) => {
         plan: 'FREE',
         status: 'ACTIVE',
         dreamsUsed: 0,
-        limit: QuotaService.FREE_LIMIT,
+        limit: QuotaService.STARTER_LIMIT,
         cycleResetAt: new Date().toISOString(),
         currentPeriodEnd: null,
       });

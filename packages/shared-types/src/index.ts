@@ -1,7 +1,7 @@
 // ─── Enums ────────────────────────────────────────────────────────────────────
 
 export type Role = 'CUSTOMER' | 'DECODER' | 'MENTOR' | 'ADMIN';
-export type Plan = 'FREE' | 'PREMIUM';
+export type Plan = 'FREE' | 'STARTER' | 'GROWTH' | 'PREMIUM';
 export type Provider = 'APPLE' | 'GOOGLE' | 'STRIPE';
 export type SubStatus = 'ACTIVE' | 'CANCELLED' | 'EXPIRED' | 'BILLING_ISSUE';
 export type SessionStatus = 'NEW' | 'IN_PROGRESS' | 'COMPLETED';
@@ -13,6 +13,7 @@ export interface User {
   id: string;
   phone: string;
   role: Role;
+  fullName: string | null;
   displayName: string | null;
   fcmToken: string | null;
   rcAppUserId: string | null;
@@ -29,7 +30,7 @@ export interface SubscriptionInfo {
   plan: Plan;
   status: SubStatus;
   dreamsUsed: number;
-  limit: 5 | 15;
+  limit: number;
   cycleResetAt: string; // ISO 8601
   currentPeriodEnd: string | null;
 }
@@ -49,7 +50,7 @@ export interface QuotaResult {
   allowed: boolean;
   status: 'active' | 'queued';
   used: number;
-  limit: 5 | 15;
+  limit: number;
 }
 
 // ─── Session ──────────────────────────────────────────────────────────────────
@@ -136,6 +137,11 @@ export interface VerifyOtpResponse {
   accessToken: string;
   refreshToken: string;
   user: UserProfile;
+  isNewUser: boolean;
+}
+
+export interface UpdateProfileRequest {
+  fullName: string;
 }
 
 export interface RefreshTokenRequest {

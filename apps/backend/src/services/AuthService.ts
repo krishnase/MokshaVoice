@@ -4,6 +4,9 @@ import { prisma } from '../lib/prisma.js';
 import { env } from '../lib/env.js';
 import { redis } from '../lib/redis.js';
 import type { Role } from '@mokshavoice/shared-types';
+import type { User, Subscription } from '@prisma/client';
+
+type UserWithSubscription = User & { subscription: Subscription | null };
 
 if (!getApps().length) {
   initializeApp({
@@ -59,7 +62,7 @@ export class AuthService {
     phone: string,
     firebaseIdToken: string,
     fastifyJwt: { sign: (payload: object, opts?: object) => string },
-  ): Promise<TokenPair & { user: Record<string, unknown> }> {
+  ): Promise<TokenPair & { user: UserWithSubscription; isNewUser: boolean }> {
     // 1. Verify the Firebase ID token — this is the authoritative OTP check
     let decoded: DecodedIdToken;
     try {
@@ -72,10 +75,10 @@ export class AuthService {
       throw Object.assign(new Error('Phone mismatch'), { statusCode: 400 });
     }
 
-    const user = await this.getOrCreateUser(phone);
+    const { user, isNewUser } = await this.getOrCreateUser(phone);
     const tokens = await this.mintTokenPair(user.id, user.role, user.phone, fastifyJwt);
 
-    return { ...tokens, user };
+    return { ...tokens, user, isNewUser };
   }
 
   // ── Token refresh ────────────────────────────────────────────────────────────
@@ -105,30 +108,32 @@ export class AuthService {
 
   // ── Helpers ──────────────────────────────────────────────────────────────────
 
-  private async getOrCreateUser(phone: string) {
+  private async getOrCreateUser(phone: string): Promise<{ user: UserWithSubscription; isNewUser: boolean }> {
     const existing = await prisma.user.findUnique({
       where: { phone },
       include: { subscription: true },
     });
 
-    if (existing) return existing;
+    if (existing) return { user: existing, isNewUser: false };
 
-    return prisma.$transaction(async (tx) => {
-      const user = await tx.user.create({ data: { phone } });
+    const user = await prisma.$transaction(async (tx) => {
+      const created = await tx.user.create({ data: { phone } });
       await tx.subscription.create({
         data: {
-          userId: user.id,
-          plan: 'FREE',
+          userId: created.id,
+          plan: 'STARTER',
           status: 'ACTIVE',
           dreamsUsed: 0,
           cycleResetAt: new Date(),
         },
       });
       return tx.user.findUniqueOrThrow({
-        where: { id: user.id },
+        where: { id: created.id },
         include: { subscription: true },
       });
     });
+
+    return { user, isNewUser: true };
   }
 
   private async mintTokenPair(

@@ -103,7 +103,7 @@ export default function VerifyScreen() {
       const firebaseIdToken = await credential.user.getIdToken();
 
       // 3. Exchange Firebase token for our JWT
-      const { accessToken, refreshToken, user } = await api.post<VerifyOtpResponse>(
+      const { accessToken, refreshToken, user, isNewUser } = await api.post<VerifyOtpResponse>(
         '/v1/auth/verify-otp',
         { phone, firebaseIdToken },
       );
@@ -112,6 +112,12 @@ export default function VerifyScreen() {
       setUser(user);
       setSubscription(user.subscription);
       phoneAuthStore.clear();
+
+      // New customers collect their name first
+      if (isNewUser && user.role === 'CUSTOMER') {
+        router.replace('/(auth)/profile-setup' as never);
+        return;
+      }
 
       // Role-based redirect
       switch (user.role) {

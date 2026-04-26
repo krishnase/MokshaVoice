@@ -14,7 +14,11 @@ export const useSubscriptionStore = create<SubscriptionState>((set) => ({
   setPlan(plan) {
     set((state) => ({
       subscription: state.subscription
-        ? { ...state.subscription, plan, limit: plan === 'PREMIUM' ? 15 : 5 }
+        ? {
+            ...state.subscription,
+            plan,
+            limit: plan === 'PREMIUM' ? 999 : plan === 'GROWTH' ? 30 : 5,
+          }
         : null,
     }));
   },

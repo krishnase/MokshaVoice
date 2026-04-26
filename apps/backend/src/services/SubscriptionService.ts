@@ -211,15 +211,15 @@ export class SubscriptionService {
 
     await prisma.subscription.update({
       where: { userId },
-      data: { plan: 'FREE', status: 'EXPIRED', currentPeriodEnd: null },
+      data: { plan: 'STARTER', status: 'EXPIRED', currentPeriodEnd: null },
     });
 
     // Tag excess sessions (beyond free limit of 5) as priority 3 (queued)
-    if (sub && sub.dreamsUsed > QuotaService.FREE_LIMIT) {
+    if (sub && sub.dreamsUsed > QuotaService.STARTER_LIMIT) {
       const excessSessions = await prisma.session.findMany({
         where: { customerId: userId, status: 'NEW' },
         orderBy: { createdAt: 'asc' },
-        skip: QuotaService.FREE_LIMIT,
+        skip: QuotaService.STARTER_LIMIT,
       });
 
       if (excessSessions.length > 0) {

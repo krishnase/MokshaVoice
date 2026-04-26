@@ -23,7 +23,15 @@ export const decoderRoutes: FastifyPluginAsync = async (fastify) => {
       take: q.limit,
       ...(q.cursor ? { cursor: { id: q.cursor }, skip: 1 } : {}),
       include: {
-        customer: { select: { id: true, phone: true, displayName: true } },
+        customer: {
+          select: {
+            id: true,
+            phone: true,
+            fullName: true,
+            displayName: true,
+            subscription: { select: { plan: true } },
+          },
+        },
         claimer: { select: { id: true, phone: true, displayName: true } },
         _count: { select: { messages: true } },
         messages: {
