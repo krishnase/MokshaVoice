@@ -78,7 +78,11 @@
       "typedRoutes": true
     },
     "extra": {
-      "router": {}
-    }
+      "router": {},
+      "eas": {
+        "projectId": "312e16ea-7207-4066-8d46-1e7be8f6068c"
+      }
+    },
+    "owner": "mokshavoice"
   }
 }
