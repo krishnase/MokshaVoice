@@ -8,6 +8,7 @@ import {
   RefreshControl,
   ActivityIndicator,
   Alert,
+  Modal,
   ActionSheetIOS,
   Platform,
   StyleSheet,
@@ -65,6 +66,7 @@ export default function AdminUsers() {
   const [roleFilter, setRoleFilter] = useState<Role | undefined>(params.role as Role | undefined);
   const [search, setSearch] = useState('');
   const [updatingId, setUpdatingId] = useState<string | null>(null);
+  const [mentorPickerUser, setMentorPickerUser] = useState<AdminUser | null>(null);
 
   const query = useInfiniteQuery({
     queryKey: ['admin-users', roleFilter, search],
@@ -126,46 +128,12 @@ export default function AdminUsers() {
     }
   };
 
-  const assignMentor = useCallback(async (user: AdminUser) => {
+  const assignMentor = useCallback((user: AdminUser) => {
     if (activeMentors.length === 0) {
       Alert.alert('No active mentors', 'Add mentors first from the Mentors screen.');
       return;
     }
-
-    const options = activeMentors.map((m) => m.name);
-    const withUnassign = user.assignedMentor ? ['Remove mentor', ...options] : options;
-
-    if (Platform.OS === 'ios') {
-      ActionSheetIOS.showActionSheetWithOptions(
-        {
-          options: [...withUnassign, 'Cancel'],
-          cancelButtonIndex: withUnassign.length,
-          title: `Assign mentor to ${user.fullName ?? maskPhone(user.phone)}`,
-        },
-        async (index) => {
-          if (index >= withUnassign.length) return;
-          const label = withUnassign[index]!;
-          if (label === 'Remove mentor') {
-            await applyMentorChange(user.id, null);
-          } else {
-            const mentor = activeMentors.find((m) => m.name === label);
-            if (mentor) await applyMentorChange(user.id, mentor.id);
-          }
-        },
-      );
-    } else {
-      Alert.alert(
-        `Assign mentor to ${user.fullName ?? maskPhone(user.phone)}`,
-        user.assignedMentor ? `Currently: ${user.assignedMentor.name}` : 'No mentor assigned',
-        [
-          ...(user.assignedMentor
-            ? [{ text: 'Remove mentor', onPress: () => applyMentorChange(user.id, null), style: 'destructive' as const }]
-            : []),
-          ...activeMentors.map((m) => ({ text: m.name, onPress: () => applyMentorChange(user.id, m.id) })),
-          { text: 'Cancel', style: 'cancel' as const },
-        ],
-      );
-    }
+    setMentorPickerUser(user);
   }, [activeMentors]);
 
   const applyMentorChange = async (userId: string, mentorId: string | null) => {
@@ -294,6 +262,63 @@ export default function AdminUsers() {
           ListEmptyComponent={<View style={styles.empty}><Text style={styles.emptyText}>No users found</Text></View>}
         />
       )}
+
+      {/* Mentor picker modal */}
+      <Modal visible={!!mentorPickerUser} animationType="slide" transparent onRequestClose={() => setMentorPickerUser(null)}>
+        <View style={styles.pickerOverlay}>
+          <View style={styles.pickerSheet}>
+            <View style={styles.pickerHeader}>
+              <Text style={styles.pickerTitle}>Assign Mentor</Text>
+              <TouchableOpacity onPress={() => setMentorPickerUser(null)} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+                <Text style={styles.pickerClose}>✕</Text>
+              </TouchableOpacity>
+            </View>
+            {mentorPickerUser && (
+              <Text style={styles.pickerSub}>
+                {mentorPickerUser.fullName ?? maskPhone(mentorPickerUser.phone)}
+                {mentorPickerUser.assignedMentor ? ` · currently ${mentorPickerUser.assignedMentor.name}` : ''}
+              </Text>
+            )}
+
+            {activeMentors.map((m) => (
+              <TouchableOpacity
+                key={m.id}
+                style={[
+                  styles.pickerOption,
+                  mentorPickerUser?.assignedMentor?.id === m.id && styles.pickerOptionActive,
+                ]}
+                onPress={async () => {
+                  const uid = mentorPickerUser!.id;
+                  setMentorPickerUser(null);
+                  await applyMentorChange(uid, m.id);
+                }}
+              >
+                <Text style={styles.pickerOptionText}>{m.name}</Text>
+                {mentorPickerUser?.assignedMentor?.id === m.id && (
+                  <Text style={styles.pickerCheck}>✓</Text>
+                )}
+              </TouchableOpacity>
+            ))}
+
+            {mentorPickerUser?.assignedMentor && (
+              <TouchableOpacity
+                style={styles.pickerRemove}
+                onPress={async () => {
+                  const uid = mentorPickerUser!.id;
+                  setMentorPickerUser(null);
+                  await applyMentorChange(uid, null);
+                }}
+              >
+                <Text style={styles.pickerRemoveText}>Remove assigned mentor</Text>
+              </TouchableOpacity>
+            )}
+
+            <TouchableOpacity style={styles.pickerCancel} onPress={() => setMentorPickerUser(null)}>
+              <Text style={styles.pickerCancelText}>Cancel</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -329,6 +354,45 @@ const styles = StyleSheet.create({
   roleText: { fontSize: 10, fontFamily: 'Inter_600SemiBold' },
   planBadge: { backgroundColor: Colors.orangeDim, borderRadius: 6, paddingHorizontal: 7, paddingVertical: 2 },
   planText: { color: Colors.orange, fontSize: 10, fontFamily: 'Inter_600SemiBold' },
+
+  pickerOverlay: { flex: 1, justifyContent: 'flex-end', backgroundColor: '#00000077' },
+  pickerSheet: {
+    backgroundColor: Colors.navyCard,
+    borderTopLeftRadius: 22,
+    borderTopRightRadius: 22,
+    paddingBottom: 32,
+    paddingHorizontal: 20,
+    paddingTop: 20,
+    gap: 4,
+  },
+  pickerHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 },
+  pickerTitle: { color: Colors.white, fontSize: 18, fontFamily: 'Poppins_700Bold' },
+  pickerClose: { color: Colors.gray3, fontSize: 20, fontFamily: 'Inter_400Regular', padding: 4 },
+  pickerSub: { color: Colors.gray4, fontSize: 13, fontFamily: 'Inter_400Regular', marginBottom: 12 },
+  pickerOption: {
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    borderRadius: 12,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: Colors.navy,
+    marginBottom: 6,
+  },
+  pickerOptionActive: { backgroundColor: Colors.orangeDim, borderWidth: 1, borderColor: Colors.orange },
+  pickerOptionText: { color: Colors.white, fontSize: 16, fontFamily: 'Inter_500Medium' },
+  pickerCheck: { color: Colors.orange, fontSize: 16, fontFamily: 'Inter_600SemiBold' },
+  pickerRemove: { paddingVertical: 14, alignItems: 'center', marginTop: 4 },
+  pickerRemoveText: { color: Colors.error, fontSize: 14, fontFamily: 'Inter_500Medium' },
+  pickerCancel: {
+    paddingVertical: 14,
+    alignItems: 'center',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: Colors.gray4,
+    marginTop: 6,
+  },
+  pickerCancelText: { color: Colors.gray3, fontSize: 15, fontFamily: 'Inter_600SemiBold' },
 
   cardActions: { flexDirection: 'row', gap: 8 },
   actionBtn: { flex: 1, borderWidth: 1, borderColor: Colors.orange + '44', borderRadius: 8, paddingVertical: 8, alignItems: 'center' },
