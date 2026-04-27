@@ -15,6 +15,7 @@
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "com.mokshavoice.app",
+      "googleServicesFile": "./ios/MokshaVoice/GoogleService-Info.plist",
       "infoPlist": {
         "NSMicrophoneUsageDescription": "MokshaVoice needs microphone access to record your dream descriptions.",
         "UIBackgroundModes": [
