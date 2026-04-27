@@ -1,7 +1,7 @@
 // ─── Enums ────────────────────────────────────────────────────────────────────
 
 export type Role = 'CUSTOMER' | 'DECODER' | 'MENTOR' | 'ADMIN';
-export type Plan = 'FREE' | 'STARTER' | 'GROWTH' | 'PREMIUM';
+export type Plan = 'FREE' | 'SILVER' | 'GOLD' | 'PLATINUM';
 export type Provider = 'APPLE' | 'GOOGLE' | 'STRIPE';
 export type SubStatus = 'ACTIVE' | 'CANCELLED' | 'EXPIRED' | 'BILLING_ISSUE';
 export type SessionStatus = 'NEW' | 'IN_PROGRESS' | 'COMPLETED';

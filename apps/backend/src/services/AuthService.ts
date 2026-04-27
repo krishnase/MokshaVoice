@@ -121,7 +121,7 @@ export class AuthService {
       await tx.subscription.create({
         data: {
           userId: created.id,
-          plan: 'STARTER',
+          plan: 'FREE',
           status: 'ACTIVE',
           dreamsUsed: 0,
           cycleResetAt: new Date(),

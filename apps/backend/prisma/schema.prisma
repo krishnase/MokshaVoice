@@ -35,7 +35,7 @@ model Subscription {
   id               String    @id @default(uuid())
   userId           String    @unique
   user             User      @relation(fields: [userId], references: [id])
-  plan             Plan      @default(STARTER)
+  plan             Plan      @default(FREE)
   provider         Provider?
   providerSubId    String?
   status           SubStatus @default(ACTIVE)
@@ -50,9 +50,9 @@ model Subscription {
 
 enum Plan {
   FREE
-  STARTER
-  GROWTH
-  PREMIUM
+  SILVER
+  GOLD
+  PLATINUM
 }
 
 enum Provider {

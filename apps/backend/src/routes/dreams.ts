@@ -44,7 +44,7 @@ export const dreamsRoute: FastifyPluginAsync = async (fastify) => {
     }
 
     const { status, used, limit, subscription } = await quotaService.checkQuota(userId);
-    const priority = status === 'queued' ? 3 : (subscription.plan === 'PREMIUM' || subscription.plan === 'GROWTH') ? 1 : 2;
+    const priority = status === 'queued' ? 3 : (subscription.plan === 'PLATINUM' || subscription.plan === 'GOLD' || subscription.plan === 'SILVER') ? 1 : 2;
 
     const session = await prisma.$transaction(async (tx) => {
       const s = await tx.session.create({

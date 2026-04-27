@@ -211,7 +211,7 @@ export class SubscriptionService {
 
     await prisma.subscription.update({
       where: { userId },
-      data: { plan: 'STARTER', status: 'EXPIRED', currentPeriodEnd: null },
+      data: { plan: 'FREE', status: 'EXPIRED', currentPeriodEnd: null },
     });
 
     // Tag excess sessions (beyond free limit of 5) as priority 3 (queued)

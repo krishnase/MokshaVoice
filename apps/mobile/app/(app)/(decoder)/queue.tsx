@@ -14,7 +14,7 @@ import { useQuery } from '@tanstack/react-query';
 import { api } from '@/src/lib/api';
 import { Colors } from '@/src/theme';
 
-type CustomerPlan = 'FREE' | 'STARTER' | 'GROWTH' | 'PREMIUM';
+type CustomerPlan = 'FREE' | 'SILVER' | 'GOLD' | 'PLATINUM';
 type Customer = {
   id: string;
   phone: string;
@@ -83,18 +83,18 @@ const STATUS_COLOR: Record<FilterStatus, string> = {
 };
 
 const PLAN_BADGE: Record<CustomerPlan, { label: string; color: string }> = {
-  FREE:    { label: 'Starter', color: Colors.gray3 },
-  STARTER: { label: 'Starter', color: Colors.gray3 },
-  GROWTH:  { label: 'Growth',  color: '#3B82F6' },
-  PREMIUM: { label: 'Premium', color: Colors.gold },
+  FREE:     { label: 'Free',     color: Colors.gray3 },
+  SILVER:   { label: 'Silver',   color: '#94A3B8' },
+  GOLD:     { label: 'Gold',     color: Colors.gold },
+  PLATINUM: { label: 'Platinum', color: '#E2E8F0' },
 };
 
 function QueueCard({ session, onPress }: { session: QueueSession; onPress: () => void }) {
   const type = dreamType(session.messages);
   const dur = totalDuration(session.messages);
   const statusColor = STATUS_COLOR[session.status];
-  const plan = session.customer.subscription?.plan ?? 'STARTER';
-  const planBadge = PLAN_BADGE[plan] ?? PLAN_BADGE.STARTER;
+  const plan = session.customer.subscription?.plan ?? 'FREE';
+  const planBadge = PLAN_BADGE[plan] ?? PLAN_BADGE.FREE;
   const customerLabel = session.customer.fullName
     ?? session.customer.displayName
     ?? maskPhone(session.customer.phone);
