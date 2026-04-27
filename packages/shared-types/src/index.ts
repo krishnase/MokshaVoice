@@ -6,6 +6,7 @@ export type Provider = 'APPLE' | 'GOOGLE' | 'STRIPE';
 export type SubStatus = 'ACTIVE' | 'CANCELLED' | 'EXPIRED' | 'BILLING_ISSUE';
 export type SessionStatus = 'NEW' | 'IN_PROGRESS' | 'COMPLETED';
 export type MessageType = 'VOICE' | 'TEXT' | 'SYSTEM';
+export type ConsultationStatus = 'PENDING' | 'SCHEDULED' | 'COMPLETED' | 'CANCELLED';
 
 // ─── User ─────────────────────────────────────────────────────────────────────
 
@@ -31,8 +32,48 @@ export interface SubscriptionInfo {
   status: SubStatus;
   dreamsUsed: number;
   limit: number;
+  callsUsed: number;
+  callsAllowed: number;
   cycleResetAt: string; // ISO 8601
   currentPeriodEnd: string | null;
+}
+
+// ─── Mentors & Consultations ──────────────────────────────────────────────────
+
+export interface Mentor {
+  id: string;
+  name: string;
+  bio: string | null;
+  calendlyUrl: string;
+}
+
+export interface MentorListResponse {
+  mentors: Mentor[];
+}
+
+export interface Consultation {
+  id: string;
+  userId: string;
+  mentorId: string;
+  mentor: Mentor;
+  calendlyEventId: string | null;
+  scheduledAt: string | null;
+  status: ConsultationStatus;
+  createdAt: string;
+}
+
+export interface BookConsultationRequest {
+  mentorId: string;
+  scheduledAt?: string;
+  calendlyEventId?: string;
+}
+
+export interface BookConsultationResponse {
+  consultation: Consultation;
+}
+
+export interface ConsultationListResponse {
+  consultations: Consultation[];
 }
 
 export interface SubscriptionRecord extends SubscriptionInfo {

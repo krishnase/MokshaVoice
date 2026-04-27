@@ -9,6 +9,8 @@ import { requireAuth } from '../../plugins/requireAuth.js';
 
 const stripe = new Stripe(env.STRIPE_SECRET_KEY, { apiVersion: '2024-04-10' });
 
+const CALLS_ALLOWED: Record<string, number> = { FREE: 0, SILVER: 1, GOLD: 2, PLATINUM: 999 };
+
 const checkoutBody = z.object({
   priceId: z.string(),
   successUrl: z.string().url(),
@@ -28,7 +30,9 @@ export const subscriptionRoutes: FastifyPluginAsync = async (fastify) => {
         plan: 'FREE',
         status: 'ACTIVE',
         dreamsUsed: 0,
-        limit: QuotaService.STARTER_LIMIT,
+        limit: QuotaService.FREE_LIMIT,
+        callsUsed: 0,
+        callsAllowed: 0,
         cycleResetAt: new Date().toISOString(),
         currentPeriodEnd: null,
       });
@@ -39,6 +43,8 @@ export const subscriptionRoutes: FastifyPluginAsync = async (fastify) => {
       status: sub.status,
       dreamsUsed: sub.dreamsUsed,
       limit: QuotaService.limitForPlan(sub.plan),
+      callsUsed: sub.callsUsed,
+      callsAllowed: CALLS_ALLOWED[sub.plan] ?? 0,
       cycleResetAt: sub.cycleResetAt.toISOString(),
       currentPeriodEnd: sub.currentPeriodEnd?.toISOString() ?? null,
     });
@@ -55,6 +61,8 @@ export const subscriptionRoutes: FastifyPluginAsync = async (fastify) => {
         status: sub.status,
         dreamsUsed: sub.dreamsUsed,
         limit: QuotaService.limitForPlan(sub.plan),
+        callsUsed: sub.callsUsed,
+        callsAllowed: CALLS_ALLOWED[sub.plan] ?? 0,
         cycleResetAt: sub.cycleResetAt.toISOString(),
         currentPeriodEnd: sub.currentPeriodEnd?.toISOString() ?? null,
       },

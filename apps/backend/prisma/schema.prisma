@@ -8,20 +8,23 @@ datasource db {
 }
 
 model User {
-  id              String               @id @default(uuid())
-  phone           String               @unique
-  role            Role                 @default(CUSTOMER)
-  fullName        String?
-  displayName     String?
-  fcmToken        String?
-  rcAppUserId     String?              @unique
-  createdAt       DateTime             @default(now())
-  subscription    Subscription?
-  sessions        Session[]            @relation("CustomerSessions")
-  claimedSessions Session[]            @relation("ClaimedSessions")
-  participants    SessionParticipant[]
-  messages        Message[]
-  notifications   Notification[]
+  id               String               @id @default(uuid())
+  phone            String               @unique
+  role             Role                 @default(CUSTOMER)
+  fullName         String?
+  displayName      String?
+  fcmToken         String?
+  rcAppUserId      String?              @unique
+  assignedMentorId String?
+  assignedMentor   Mentor?              @relation("AssignedMentor", fields: [assignedMentorId], references: [id])
+  createdAt        DateTime             @default(now())
+  subscription     Subscription?
+  sessions         Session[]            @relation("CustomerSessions")
+  claimedSessions  Session[]            @relation("ClaimedSessions")
+  participants     SessionParticipant[]
+  messages         Message[]
+  notifications    Notification[]
+  consultations    Consultation[]
 }
 
 enum Role {
@@ -40,6 +43,7 @@ model Subscription {
   providerSubId    String?
   status           SubStatus @default(ACTIVE)
   dreamsUsed       Int       @default(0)
+  callsUsed        Int       @default(0)
   cycleResetAt     DateTime  @default(now())
   currentPeriodEnd DateTime?
   createdAt        DateTime  @default(now())
@@ -136,4 +140,36 @@ model Notification {
   createdAt DateTime @default(now())
 
   @@index([userId, read])
+}
+
+model Mentor {
+  id            String         @id @default(uuid())
+  name          String
+  bio           String?
+  calendlyUrl   String
+  active        Boolean        @default(true)
+  createdAt     DateTime       @default(now())
+  consultations Consultation[]
+  assignedUsers User[]         @relation("AssignedMentor")
+}
+
+model Consultation {
+  id              String             @id @default(uuid())
+  userId          String
+  user            User               @relation(fields: [userId], references: [id])
+  mentorId        String
+  mentor          Mentor             @relation(fields: [mentorId], references: [id])
+  calendlyEventId String?
+  scheduledAt     DateTime?
+  status          ConsultationStatus @default(PENDING)
+  createdAt       DateTime           @default(now())
+
+  @@index([userId, createdAt])
+}
+
+enum ConsultationStatus {
+  PENDING
+  SCHEDULED
+  COMPLETED
+  CANCELLED
 }

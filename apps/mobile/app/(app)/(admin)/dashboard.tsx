@@ -219,6 +219,10 @@ export default function AdminDashboard() {
             <Text style={styles.actionIcon}>🔮</Text>
             <Text style={styles.actionLabel}>Decoders</Text>
           </TouchableOpacity>
+          <TouchableOpacity style={styles.actionBtn} onPress={() => router.push('/(app)/(admin)/mentors')} activeOpacity={0.75}>
+            <Text style={styles.actionIcon}>🧘</Text>
+            <Text style={styles.actionLabel}>Mentors</Text>
+          </TouchableOpacity>
         </View>
       </ScrollView>
     </SafeAreaView>

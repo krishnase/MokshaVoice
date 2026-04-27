@@ -28,6 +28,7 @@ import { audioRoutes } from './routes/audio.js';
 import { dreamsRoute } from './routes/dreams.js';
 import { decoderRoutes } from './routes/decoder.js';
 import { adminRoutes } from './routes/admin.js';
+import { mentorsRoute } from './routes/mentors.js';
 import { revenueCatWebhookRoute } from './routes/webhooks/revenuecat.js';
 import { stripeWebhookRoute } from './routes/webhooks/stripe.js';
 
@@ -79,6 +80,7 @@ export async function buildApp(): Promise<FastifyInstance> {
   await app.register(dreamsRoute, { prefix: '/v1/dreams' });
   await app.register(decoderRoutes, { prefix: '/v1/decoder' });
   await app.register(adminRoutes, { prefix: '/v1/admin' });
+  await app.register(mentorsRoute, { prefix: '/v1/mentors' });
 
   // ── Health check ─────────────────────────────────────────────────────────────
   app.get('/health', async () => ({ status: 'ok', ts: new Date().toISOString() }));

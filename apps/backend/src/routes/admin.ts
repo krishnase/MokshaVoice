@@ -71,9 +71,11 @@ export const adminRoutes: FastifyPluginAsync = async (fastify) => {
         id: true,
         phone: true,
         role: true,
+        fullName: true,
         displayName: true,
         createdAt: true,
         subscription: { select: { plan: true, status: true, dreamsUsed: true } },
+        assignedMentor: { select: { id: true, name: true } },
         _count: { select: { sessions: true } },
       },
     });
@@ -99,6 +101,83 @@ export const adminRoutes: FastifyPluginAsync = async (fastify) => {
     });
 
     return reply.send(user);
+  });
+
+  // PATCH /v1/admin/users/:id/mentor — assign (or unassign) a mentor
+  fastify.patch('/users/:id/mentor', async (request, reply) => {
+    const { id } = z.object({ id: z.string().uuid() }).parse(request.params);
+    const { mentorId } = z.object({
+      mentorId: z.string().uuid().nullable(),
+    }).parse(request.body);
+
+    if (mentorId) {
+      const mentor = await prisma.mentor.findUnique({ where: { id: mentorId } });
+      if (!mentor) return reply.status(404).send({ statusCode: 404, error: 'Not Found', message: 'Mentor not found.' });
+    }
+
+    const user = await prisma.user.update({
+      where: { id },
+      data: { assignedMentorId: mentorId },
+      select: {
+        id: true,
+        phone: true,
+        fullName: true,
+        assignedMentor: { select: { id: true, name: true } },
+      },
+    });
+    return reply.send(user);
+  });
+
+  // ── Mentor management ─────────────────────────────────────────────────────────
+
+  const mentorBody = z.object({
+    name: z.string().min(2).max(100),
+    bio: z.string().max(500).optional(),
+    calendlyUrl: z.string().url(),
+    active: z.boolean().optional(),
+  });
+
+  // GET /v1/admin/mentors
+  fastify.get('/mentors', async (_request, reply) => {
+    const mentors = await prisma.mentor.findMany({
+      orderBy: { createdAt: 'desc' },
+      include: { _count: { select: { consultations: true } } },
+    });
+    return reply.send({ mentors });
+  });
+
+  // POST /v1/admin/mentors
+  fastify.post('/mentors', async (request, reply) => {
+    const parsed = mentorBody.parse(request.body);
+    const mentor = await prisma.mentor.create({
+      data: {
+        name: parsed.name,
+        calendlyUrl: parsed.calendlyUrl,
+        bio: parsed.bio ?? null,
+        ...(parsed.active !== undefined ? { active: parsed.active } : {}),
+      } as never,
+    });
+    return reply.status(201).send({ mentor });
+  });
+
+  // PATCH /v1/admin/mentors/:id
+  fastify.patch('/mentors/:id', async (request, reply) => {
+    const { id } = z.object({ id: z.string().uuid() }).parse(request.params);
+    const parsed = mentorBody.partial().parse(request.body);
+    const updateData: Record<string, unknown> = {};
+    if (parsed.name !== undefined) updateData['name'] = parsed.name;
+    if (parsed.calendlyUrl !== undefined) updateData['calendlyUrl'] = parsed.calendlyUrl;
+    if (parsed.bio !== undefined) updateData['bio'] = parsed.bio ?? null;
+    if (parsed.active !== undefined) updateData['active'] = parsed.active;
+    const mentor = await prisma.mentor.update({ where: { id }, data: updateData as never });
+    return reply.send({ mentor });
+  });
+
+  // DELETE /v1/admin/mentors/:id (soft-delete via active=false)
+  fastify.delete('/mentors/:id', async (request, reply) => {
+    const { id } = z.object({ id: z.string().uuid() }).parse(request.params);
+    await prisma.mentor.update({ where: { id }, data: { active: false } });
+    return reply.send({ ok: true });
   });
 
   // GET /v1/admin/dreams?status=&cursor=&limit=

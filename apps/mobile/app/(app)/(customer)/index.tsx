@@ -122,6 +122,13 @@ export default function DreamList() {
           </View>
           <TouchableOpacity
             style={styles.tab}
+            onPress={() => router.push('/(app)/(customer)/mentors')}
+          >
+            <Text style={styles.tabIcon}>🧘</Text>
+            <Text style={styles.tabLabel}>Mentors</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.tab}
             onPress={() => router.push('/(app)/(customer)/profile')}
           >
             <Text style={styles.tabIcon}>👤</Text>

@@ -26,7 +26,7 @@ export async function startWorkers(): Promise<void> {
       });
 
       for (const sub of subs) {
-        const newPriority = sub.plan === 'PREMIUM' ? 1 : 2;
+        const newPriority = sub.plan === 'GOLD' || sub.plan === 'SILVER' || sub.plan === 'PLATINUM' ? 1 : 2;
         const nextReset = new Date(sub.cycleResetAt);
         nextReset.setMonth(nextReset.getMonth() + 1);
 

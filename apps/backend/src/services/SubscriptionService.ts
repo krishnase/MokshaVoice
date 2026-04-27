@@ -115,14 +115,14 @@ export class SubscriptionService {
       where: { userId },
       create: {
         userId,
-        plan: 'PREMIUM',
+        plan: 'GOLD',
         status: 'ACTIVE',
         provider: provider ?? null,
         currentPeriodEnd: expiresDate,
         cycleResetAt,
       },
       update: {
-        plan: 'PREMIUM',
+        plan: 'GOLD',
         status: 'ACTIVE',
         provider: provider ?? null,
         currentPeriodEnd: expiresDate,
@@ -144,7 +144,7 @@ export class SubscriptionService {
       where: { userId },
       create: {
         userId,
-        plan: 'PREMIUM',
+        plan: 'GOLD',
         status: 'ACTIVE',
         provider: provider ?? null,
         providerSubId: event.product_id ?? null,
@@ -152,7 +152,7 @@ export class SubscriptionService {
         cycleResetAt,
       },
       update: {
-        plan: 'PREMIUM',
+        plan: 'GOLD',
         status: 'ACTIVE',
         provider: provider ?? null,
         providerSubId: event.product_id ?? null,
@@ -215,11 +215,11 @@ export class SubscriptionService {
     });
 
     // Tag excess sessions (beyond free limit of 5) as priority 3 (queued)
-    if (sub && sub.dreamsUsed > QuotaService.STARTER_LIMIT) {
+    if (sub && sub.dreamsUsed > QuotaService.FREE_LIMIT) {
       const excessSessions = await prisma.session.findMany({
         where: { customerId: userId, status: 'NEW' },
         orderBy: { createdAt: 'asc' },
-        skip: QuotaService.STARTER_LIMIT,
+        skip: QuotaService.FREE_LIMIT,
       });
 
       if (excessSessions.length > 0) {

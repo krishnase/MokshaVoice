@@ -39,7 +39,7 @@ export const stripeWebhookRoute: FastifyPluginAsync = async (fastify) => {
             where: { userId },
             create: {
               userId,
-              plan: isActive ? 'PREMIUM' : 'FREE',
+              plan: isActive ? 'GOLD' : 'FREE',
               status: isActive ? 'ACTIVE' : 'EXPIRED',
               provider: 'STRIPE',
               providerSubId: sub.id,
@@ -47,7 +47,7 @@ export const stripeWebhookRoute: FastifyPluginAsync = async (fastify) => {
               cycleResetAt,
             },
             update: {
-              plan: isActive ? 'PREMIUM' : 'FREE',
+              plan: isActive ? 'GOLD' : 'FREE',
               status: isActive ? 'ACTIVE' : 'EXPIRED',
               provider: 'STRIPE',
               providerSubId: sub.id,

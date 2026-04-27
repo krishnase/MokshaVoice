@@ -1,0 +1,3 @@
+ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "assignedMentorId" TEXT;
+ALTER TABLE "User" ADD CONSTRAINT "User_assignedMentorId_fkey"
+  FOREIGN KEY ("assignedMentorId") REFERENCES "Mentor"("id") ON DELETE SET NULL ON UPDATE CASCADE;

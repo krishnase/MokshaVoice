@@ -14,21 +14,25 @@ import {
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useInfiniteQuery, useQueryClient } from '@tanstack/react-query';
+import { useInfiniteQuery, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/src/lib/api';
 import { Colors } from '@/src/theme';
 
 type Role = 'CUSTOMER' | 'DECODER' | 'MENTOR' | 'ADMIN';
+type AssignedMentor = { id: string; name: string };
 type AdminUser = {
   id: string;
   phone: string;
+  fullName: string | null;
   role: Role;
   displayName: string | null;
   createdAt: string;
   subscription: { plan: string; status: string; dreamsUsed: number } | null;
+  assignedMentor: AssignedMentor | null;
   _count: { sessions: number };
 };
 type UsersPage = { data: AdminUser[]; nextCursor: string | null; hasMore: boolean };
+type MentorListItem = { id: string; name: string; active: boolean };
 
 const ROLES: Role[] = ['CUSTOMER', 'DECODER', 'MENTOR', 'ADMIN'];
 const ROLE_FILTERS = [{ label: 'All', value: undefined }, ...ROLES.map((r) => ({ label: r, value: r }))] as const;
@@ -75,7 +79,16 @@ export default function AdminUsers() {
     initialPageParam: undefined as string | undefined,
   });
 
+  const mentorsQuery = useQuery({
+    queryKey: ['admin-mentors-list'],
+    queryFn: () => api.get<{ mentors: MentorListItem[] }>('/v1/admin/mentors'),
+  });
+
   const users = useMemo(() => query.data?.pages.flatMap((p) => p.data) ?? [], [query.data]);
+  const activeMentors = useMemo(
+    () => (mentorsQuery.data?.mentors ?? []).filter((m) => m.active),
+    [mentorsQuery.data],
+  );
 
   const changeRole = useCallback(async (user: AdminUser) => {
     const options = ROLES.filter((r) => r !== user.role);
@@ -113,46 +126,125 @@ export default function AdminUsers() {
     }
   };
 
+  const assignMentor = useCallback(async (user: AdminUser) => {
+    if (activeMentors.length === 0) {
+      Alert.alert('No active mentors', 'Add mentors first from the Mentors screen.');
+      return;
+    }
+
+    const options = activeMentors.map((m) => m.name);
+    const withUnassign = user.assignedMentor ? ['Remove mentor', ...options] : options;
+
+    if (Platform.OS === 'ios') {
+      ActionSheetIOS.showActionSheetWithOptions(
+        {
+          options: [...withUnassign, 'Cancel'],
+          cancelButtonIndex: withUnassign.length,
+          title: `Assign mentor to ${user.fullName ?? maskPhone(user.phone)}`,
+        },
+        async (index) => {
+          if (index >= withUnassign.length) return;
+          const label = withUnassign[index]!;
+          if (label === 'Remove mentor') {
+            await applyMentorChange(user.id, null);
+          } else {
+            const mentor = activeMentors.find((m) => m.name === label);
+            if (mentor) await applyMentorChange(user.id, mentor.id);
+          }
+        },
+      );
+    } else {
+      Alert.alert(
+        `Assign mentor to ${user.fullName ?? maskPhone(user.phone)}`,
+        user.assignedMentor ? `Currently: ${user.assignedMentor.name}` : 'No mentor assigned',
+        [
+          ...(user.assignedMentor
+            ? [{ text: 'Remove mentor', onPress: () => applyMentorChange(user.id, null), style: 'destructive' as const }]
+            : []),
+          ...activeMentors.map((m) => ({ text: m.name, onPress: () => applyMentorChange(user.id, m.id) })),
+          { text: 'Cancel', style: 'cancel' as const },
+        ],
+      );
+    }
+  }, [activeMentors]);
+
+  const applyMentorChange = async (userId: string, mentorId: string | null) => {
+    setUpdatingId(userId);
+    try {
+      await api.patch(`/v1/admin/users/${userId}/mentor`, { mentorId });
+      void queryClient.invalidateQueries({ queryKey: ['admin-users'] });
+    } catch (err: unknown) {
+      Alert.alert('Error', (err as { message?: string }).message ?? 'Could not assign mentor.');
+    } finally {
+      setUpdatingId(null);
+    }
+  };
+
   const renderItem = useCallback(({ item }: { item: AdminUser }) => {
     const roleColor = ROLE_COLOR[item.role];
     const isUpdating = updatingId === item.id;
+    const label = item.fullName ?? item.displayName ?? maskPhone(item.phone);
+
     return (
       <View style={styles.card}>
         <View style={styles.cardTop}>
           <View style={{ flex: 1 }}>
-            {item.displayName
-              ? <>
-                  <Text style={styles.displayName}>{item.displayName}</Text>
-                  <Text style={styles.phone}>{maskPhone(item.phone)}</Text>
-                </>
-              : <Text style={styles.phone}>{maskPhone(item.phone)}</Text>
-            }
+            <Text style={styles.displayName}>{label}</Text>
+            {(item.fullName || item.displayName) && (
+              <Text style={styles.phone}>{maskPhone(item.phone)}</Text>
+            )}
             <Text style={styles.meta}>
               Joined {timeAgo(item.createdAt)} · {item._count.sessions} dream{item._count.sessions !== 1 ? 's' : ''}
             </Text>
+            {/* Assigned mentor chip */}
+            {item.role === 'CUSTOMER' && (
+              <View style={styles.mentorChipRow}>
+                <Text style={styles.mentorChipLabel}>Mentor: </Text>
+                <Text style={[styles.mentorChipValue, !item.assignedMentor && styles.mentorChipNone]}>
+                  {item.assignedMentor ? item.assignedMentor.name : 'Not assigned'}
+                </Text>
+              </View>
+            )}
           </View>
           <View style={{ alignItems: 'flex-end', gap: 6 }}>
             <View style={[styles.roleBadge, { borderColor: roleColor, backgroundColor: roleColor + '18' }]}>
               <Text style={[styles.roleText, { color: roleColor }]}>{item.role}</Text>
             </View>
-            {item.subscription?.plan === 'PREMIUM' && (
-              <View style={styles.proBadge}><Text style={styles.proText}>PRO</Text></View>
+            {item.subscription && item.subscription.plan !== 'FREE' && (
+              <View style={styles.planBadge}>
+                <Text style={styles.planText}>{item.subscription.plan}</Text>
+              </View>
             )}
           </View>
         </View>
-        <TouchableOpacity
-          style={[styles.changeRoleBtn, isUpdating && styles.btnDisabled]}
-          onPress={() => changeRole(item)}
-          disabled={isUpdating}
-        >
-          {isUpdating
-            ? <ActivityIndicator color={Colors.orange} size="small" />
-            : <Text style={styles.changeRoleText}>Change Role</Text>
-          }
-        </TouchableOpacity>
+
+        <View style={styles.cardActions}>
+          <TouchableOpacity
+            style={[styles.actionBtn, isUpdating && styles.btnDisabled]}
+            onPress={() => changeRole(item)}
+            disabled={isUpdating}
+          >
+            {isUpdating
+              ? <ActivityIndicator color={Colors.orange} size="small" />
+              : <Text style={styles.actionBtnText}>Change Role</Text>
+            }
+          </TouchableOpacity>
+
+          {item.role === 'CUSTOMER' && (
+            <TouchableOpacity
+              style={[styles.actionBtn, styles.mentorBtn, isUpdating && styles.btnDisabled]}
+              onPress={() => assignMentor(item)}
+              disabled={isUpdating}
+            >
+              <Text style={styles.mentorBtnText}>
+                {item.assignedMentor ? 'Reassign Mentor' : 'Assign Mentor'}
+              </Text>
+            </TouchableOpacity>
+          )}
+        </View>
       </View>
     );
-  }, [updatingId, changeRole]);
+  }, [updatingId, changeRole, assignMentor]);
 
   return (
     <SafeAreaView style={styles.safe}>
@@ -164,7 +256,6 @@ export default function AdminUsers() {
         <View style={{ width: 60 }} />
       </View>
 
-      {/* Search */}
       <View style={styles.searchRow}>
         <TextInput
           style={styles.searchInput}
@@ -176,7 +267,6 @@ export default function AdminUsers() {
         />
       </View>
 
-      {/* Role filter */}
       <View style={styles.filterRow}>
         {ROLE_FILTERS.map((f) => (
           <TouchableOpacity
@@ -225,16 +315,25 @@ const styles = StyleSheet.create({
   center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   empty: { paddingTop: 60, alignItems: 'center' },
   emptyText: { color: Colors.gray4, fontSize: 14, fontFamily: 'Inter_400Regular' },
+
   card: { backgroundColor: Colors.navyCard, borderRadius: 12, marginHorizontal: 16, marginVertical: 5, padding: 14, gap: 10, borderWidth: 1, borderColor: Colors.gold + '18' },
   cardTop: { flexDirection: 'row', gap: 8 },
   displayName: { color: Colors.white, fontSize: 15, fontFamily: 'Inter_600SemiBold' },
   phone: { color: Colors.gray3, fontSize: 12, fontFamily: 'Inter_400Regular', marginTop: 2 },
   meta: { color: Colors.gray4, fontSize: 12, fontFamily: 'Inter_400Regular', marginTop: 3 },
+  mentorChipRow: { flexDirection: 'row', marginTop: 5, alignItems: 'center' },
+  mentorChipLabel: { color: Colors.gray4, fontSize: 12, fontFamily: 'Inter_400Regular' },
+  mentorChipValue: { color: Colors.gold, fontSize: 12, fontFamily: 'Inter_600SemiBold' },
+  mentorChipNone: { color: Colors.gray4, fontFamily: 'Inter_400Regular' },
   roleBadge: { borderRadius: 6, borderWidth: 1, paddingHorizontal: 8, paddingVertical: 3 },
   roleText: { fontSize: 10, fontFamily: 'Inter_600SemiBold' },
-  proBadge: { backgroundColor: Colors.goldDim, borderRadius: 6, paddingHorizontal: 7, paddingVertical: 2 },
-  proText: { color: Colors.gold, fontSize: 10, fontFamily: 'Inter_600SemiBold' },
-  changeRoleBtn: { borderWidth: 1, borderColor: Colors.orange + '44', borderRadius: 8, paddingVertical: 8, alignItems: 'center' },
+  planBadge: { backgroundColor: Colors.orangeDim, borderRadius: 6, paddingHorizontal: 7, paddingVertical: 2 },
+  planText: { color: Colors.orange, fontSize: 10, fontFamily: 'Inter_600SemiBold' },
+
+  cardActions: { flexDirection: 'row', gap: 8 },
+  actionBtn: { flex: 1, borderWidth: 1, borderColor: Colors.orange + '44', borderRadius: 8, paddingVertical: 8, alignItems: 'center' },
+  mentorBtn: { borderColor: Colors.gold + '66', flex: 1.3 },
   btnDisabled: { opacity: 0.5 },
-  changeRoleText: { color: Colors.orange, fontSize: 13, fontFamily: 'Inter_600SemiBold' },
+  actionBtnText: { color: Colors.orange, fontSize: 13, fontFamily: 'Inter_600SemiBold' },
+  mentorBtnText: { color: Colors.gold, fontSize: 13, fontFamily: 'Inter_600SemiBold' },
 });
