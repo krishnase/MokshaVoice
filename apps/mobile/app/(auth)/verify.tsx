@@ -109,12 +109,28 @@ export default function VerifyScreen() {
       );
 
       setTokens(accessToken, refreshToken);
-      setUser(user);
       setSubscription(user.subscription);
+
+      // If name was captured on login screen, save it now
+      const capturedName = phoneAuthStore.getFullName();
+      if (capturedName && !user.fullName) {
+        try {
+          const { user: updated } = await api.put<{ user: typeof user }>('/v1/auth/profile', {
+            fullName: capturedName,
+          });
+          if (updated) setUser(updated);
+          else setUser(user);
+        } catch {
+          setUser(user);
+        }
+      } else {
+        setUser(user);
+      }
+
       phoneAuthStore.clear();
 
-      // New customers collect their name first
-      if (isNewUser && user.role === 'CUSTOMER') {
+      // New customers with no name still go to profile-setup
+      if (isNewUser && user.role === 'CUSTOMER' && !capturedName) {
         router.replace('/(auth)/profile-setup' as never);
         return;
       }

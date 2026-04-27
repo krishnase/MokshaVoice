@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import {
   View,
   Text,
@@ -26,6 +26,8 @@ const COUNTRY_CODES = [
 
 export default function LoginScreen() {
   const router = useRouter();
+  const phoneRef = useRef<TextInput>(null);
+  const [fullName, setFullName] = useState('');
   const [countryCode, setCountryCode] = useState('+1');
   const [phoneNumber, setPhoneNumber] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -33,8 +35,14 @@ export default function LoginScreen() {
 
   const fullPhone = `${countryCode}${phoneNumber.replace(/\D/g, '')}`;
   const isValidPhone = /^\+[1-9]\d{6,14}$/.test(fullPhone);
+  const isValidName = fullName.trim().length >= 2;
+  const canContinue = isValidPhone && isValidName;
 
   async function handleSendOtp() {
+    if (!isValidName) {
+      Alert.alert('Name required', 'Please enter your full name.');
+      return;
+    }
     if (!isValidPhone) {
       Alert.alert('Invalid number', 'Please enter a valid phone number.');
       return;
@@ -42,7 +50,7 @@ export default function LoginScreen() {
     setIsLoading(true);
     try {
       const confirmation = await auth().signInWithPhoneNumber(fullPhone);
-      phoneAuthStore.setConfirmation(confirmation, fullPhone);
+      phoneAuthStore.setConfirmation(confirmation, fullPhone, fullName.trim());
       router.push('/(auth)/verify');
     } catch (err: unknown) {
       const e = err as { message?: string; code?: string };
@@ -88,9 +96,24 @@ export default function LoginScreen() {
 
           {/* Form */}
           <View style={styles.form}>
-            <Text style={styles.label}>Enter your phone number</Text>
-            <Text style={styles.sublabel}>We'll send a one-time code to verify your number</Text>
+            <Text style={styles.label}>Create your account</Text>
+            <Text style={styles.sublabel}>Tell us who you are to get started</Text>
 
+            {/* Full name */}
+            <TextInput
+              style={styles.nameInput}
+              placeholder="Full name"
+              placeholderTextColor={Colors.gray4}
+              value={fullName}
+              onChangeText={setFullName}
+              autoCapitalize="words"
+              returnKeyType="next"
+              onSubmitEditing={() => phoneRef.current?.focus()}
+              maxLength={100}
+            />
+
+            {/* Phone */}
+            <Text style={styles.phoneLabel}>Phone number</Text>
             <View style={styles.phoneRow}>
               <TouchableOpacity
                 style={styles.countryButton}
@@ -104,6 +127,7 @@ export default function LoginScreen() {
               </TouchableOpacity>
 
               <TextInput
+                ref={phoneRef}
                 style={styles.phoneInput}
                 placeholder="(555) 000-0000"
                 placeholderTextColor={Colors.gray4}
@@ -131,9 +155,9 @@ export default function LoginScreen() {
             )}
 
             <TouchableOpacity
-              style={[styles.sendButton, (!isValidPhone || isLoading) && styles.sendButtonDisabled]}
+              style={[styles.sendButton, (!canContinue || isLoading) && styles.sendButtonDisabled]}
               onPress={handleSendOtp}
-              disabled={!isValidPhone || isLoading}
+              disabled={!canContinue || isLoading}
             >
               {isLoading
                 ? <ActivityIndicator color="#fff" />
@@ -174,7 +198,20 @@ const styles = StyleSheet.create({
   dividerIcon: { fontSize: 18, marginHorizontal: 12 },
   form: { flex: 1 },
   label: { fontFamily: 'Poppins_600SemiBold', fontSize: 20, color: Colors.white, marginBottom: 6 },
-  sublabel: { fontFamily: 'Inter_400Regular', fontSize: 14, color: Colors.gray3, marginBottom: 24 },
+  sublabel: { fontFamily: 'Inter_400Regular', fontSize: 14, color: Colors.gray3, marginBottom: 20 },
+  nameInput: {
+    backgroundColor: Colors.navyCard,
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    fontFamily: 'Inter_400Regular',
+    fontSize: 17,
+    color: Colors.white,
+    borderWidth: 1,
+    borderColor: Colors.gold + '44',
+    marginBottom: 16,
+  },
+  phoneLabel: { fontFamily: 'Inter_500Medium', fontSize: 13, color: Colors.gray3, marginBottom: 8 },
   phoneRow: { flexDirection: 'row', gap: 8, marginBottom: 8 },
   countryButton: {
     flexDirection: 'row',
