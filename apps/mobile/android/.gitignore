@@ -1,17 +1,8 @@
-# OSX
-#
-.DS_Store
-
-# Android/IntelliJ
-#
+# Build artifacts
 build/
-.idea
-.gradle
-local.properties
+.gradle/
+app/build/
+app/.cxx/
 *.iml
-*.hprof
-.cxx/
-
-# Bundle artifacts
-*.jsbundle
-keystore.properties
+.idea/
+local.properties

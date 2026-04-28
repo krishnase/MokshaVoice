@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "308947699677",
+    "project_id": "mokshavoice",
+    "storage_bucket": "mokshavoice.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:308947699677:android:13e25d4ab3e958f3529834",
+        "android_client_info": {
+          "package_name": "com.mokshavoice.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBlYJofJFaaQhQimdu7QlTgAsX60m-jG9A"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
