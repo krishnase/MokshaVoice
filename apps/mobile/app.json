@@ -39,13 +39,7 @@
         "android.permission.INTERNET",
         "android.permission.RECEIVE_BOOT_COMPLETED",
         "android.permission.MODIFY_AUDIO_SETTINGS"
-      ],
-      "keystore": {
-        "keyAlias": "mokshavoice",
-        "keyPassword": "Dreams@143",
-        "storeFile": "./android/app/release.keystore",
-        "storePassword": "Dreams@143"
-      }
+      ]
     },
     "plugins": [
       "expo-router",
