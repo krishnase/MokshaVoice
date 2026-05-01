@@ -23,7 +23,7 @@
     "expo": "~53.0.0",
     "expo-av": "~15.1.7",
     "expo-build-properties": "~0.14.6",
-    "expo-constants": "^55.0.15",
+    "expo-constants": "^17.1.8",
     "expo-file-system": "~18.1.11",
     "expo-font": "~13.3.1",
     "expo-linking": "~7.1.7",
@@ -55,7 +55,12 @@
   "expo": {
     "doctor": {
       "reactNativeDirectoryCheck": {
-        "exclude": ["@mokshavoice/shared-types", "firebase", "socket.io-client"],
+        "exclude": [
+          "@mokshavoice/shared-types",
+          "expo-av",
+          "firebase",
+          "socket.io-client"
+        ],
         "listUnknownPackages": false
       }
     }
