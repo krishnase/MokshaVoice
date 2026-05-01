@@ -132,6 +132,9 @@ importers:
       expo-build-properties:
         specifier: ~0.14.6
         version: 0.14.8(expo@53.0.27)
+      expo-constants:
+        specifier: ^55.0.15
+        version: 55.0.15(expo@53.0.27)(react-native@0.79.6(@babel/core@7.29.0)(@types/react@19.0.14)(react@19.0.0))
       expo-file-system:
         specifier: ~18.1.11
         version: 18.1.11(expo@53.0.27)(react-native@0.79.6(@babel/core@7.29.0)(@types/react@19.0.14)(react@19.0.0))
@@ -187,9 +190,6 @@ importers:
       '@babel/core':
         specifier: ^7.24.0
         version: 7.29.0
-      '@expo/config-plugins':
-        specifier: 10.1.2
-        version: 10.1.2
       '@types/react':
         specifier: ~19.0.14
         version: 19.0.14

@@ -28,7 +28,6 @@
     "android": {
       "package": "com.mokshavoice.app",
       "versionCode": 2,
-      "usesCleartextTraffic": true,
       "googleServicesFile": "./google-services.json",
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
