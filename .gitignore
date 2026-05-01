@@ -6,8 +6,8 @@ dist/
 *.env.example.*
 .turbo/
 .expo/
-# ios/ and android/ are committed for bare-workflow EAS builds
-# Build artifacts are excluded via apps/mobile/android/.gitignore
+ios/
+android/
 *.orig.*
 *.jks
 *.p8
