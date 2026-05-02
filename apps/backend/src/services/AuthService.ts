@@ -109,10 +109,26 @@ export class AuthService {
   // ── Helpers ──────────────────────────────────────────────────────────────────
 
   private async getOrCreateUser(phone: string): Promise<{ user: UserWithSubscription; isNewUser: boolean }> {
-    const existing = await prisma.user.findUnique({
-      where: { phone },
-      include: { subscription: true },
-    });
+    let existing: UserWithSubscription | null = null;
+    try {
+      existing = await prisma.user.findUnique({
+        where: { phone },
+        include: { subscription: true },
+      });
+    } catch {
+      // Stale/invalid enum value in subscription — heal the row then re-fetch
+      const bare = await prisma.user.findUnique({ where: { phone } });
+      if (bare) {
+        await prisma.subscription.updateMany({
+          where: { userId: bare.id },
+          data: { plan: 'FREE' },
+        });
+        existing = await prisma.user.findUnique({
+          where: { phone },
+          include: { subscription: true },
+        });
+      }
+    }
 
     if (existing) return { user: existing, isNewUser: false };
 

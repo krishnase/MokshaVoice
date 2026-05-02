@@ -5,6 +5,7 @@ import {
   TextInput,
   TouchableOpacity,
   KeyboardAvoidingView,
+  ScrollView,
   Platform,
   ActivityIndicator,
   StyleSheet,
@@ -76,7 +77,11 @@ export default function LoginScreen() {
   return (
     <SafeAreaView style={styles.safe}>
       <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
-        <View style={styles.container}>
+        <ScrollView
+          contentContainerStyle={styles.scrollContent}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        >
 
           {/* Header */}
           <View style={styles.header}>
@@ -169,7 +174,7 @@ export default function LoginScreen() {
           <Text style={styles.disclaimer}>
             By continuing, you agree to our Terms of Service and Privacy Policy.{'\n'}Standard SMS rates may apply.
           </Text>
-        </View>
+        </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
@@ -178,7 +183,7 @@ export default function LoginScreen() {
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: Colors.navy },
   flex: { flex: 1 },
-  container: { flex: 1, paddingHorizontal: 28, justifyContent: 'space-between', paddingBottom: 32 },
+  scrollContent: { paddingHorizontal: 28, paddingBottom: 40 },
   header: { alignItems: 'center', paddingTop: 52, paddingBottom: 24 },
   iconWrap: {
     width: 110,
@@ -196,7 +201,7 @@ const styles = StyleSheet.create({
   divider: { flexDirection: 'row', alignItems: 'center', marginVertical: 8 },
   dividerLine: { flex: 1, height: 1, backgroundColor: Colors.gold + '33' },
   dividerIcon: { fontSize: 18, marginHorizontal: 12 },
-  form: { flex: 1 },
+  form: {},
   label: { fontFamily: 'Poppins_600SemiBold', fontSize: 20, color: Colors.white, marginBottom: 6 },
   sublabel: { fontFamily: 'Inter_400Regular', fontSize: 14, color: Colors.gray3, marginBottom: 20 },
   nameInput: {
@@ -265,5 +270,5 @@ const styles = StyleSheet.create({
   },
   sendButtonDisabled: { backgroundColor: Colors.gray4, shadowOpacity: 0 },
   sendButtonText: { fontFamily: 'Poppins_600SemiBold', color: Colors.white, fontSize: 16, letterSpacing: 0.3 },
-  disclaimer: { fontFamily: 'Inter_400Regular', fontSize: 11, color: Colors.gray4, textAlign: 'center', lineHeight: 17 },
+  disclaimer: { fontFamily: 'Inter_400Regular', fontSize: 11, color: Colors.gray4, textAlign: 'center', lineHeight: 17, marginTop: 24 },
 });
