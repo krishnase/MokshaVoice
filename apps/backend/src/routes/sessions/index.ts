@@ -82,14 +82,24 @@ export const sessionRoutes: FastifyPluginAsync = async (fastify) => {
     return reply.send(session);
   });
 
-  // PATCH /sessions/:id/analyzer-claim — analyzer claims a NEW session
+  // PATCH /sessions/:id/analyzer-claim — claim for self OR assign to a specific analyzer
   fastify.patch('/:id/analyzer-claim', async (request, reply) => {
     const { id } = z.object({ id: z.string().uuid() }).parse(request.params);
-    const analyzerId = request.user.sub;
+    const callerId = request.user.sub;
     const callerRole = request.user.role;
 
     if (!['ANALYZER', 'MENTOR', 'ADMIN'].includes(callerRole)) {
       return reply.status(403).send({ error: 'Forbidden' });
+    }
+
+    const { analyzerId: targetId } = z.object({ analyzerId: z.string().uuid().optional() }).parse(request.body ?? {});
+    const analyzerId = targetId ?? callerId;
+
+    if (targetId && targetId !== callerId) {
+      const target = await prisma.user.findUnique({ where: { id: targetId }, select: { role: true } });
+      if (!target || !['ANALYZER', 'MENTOR', 'ADMIN'].includes(target.role)) {
+        return reply.status(400).send({ error: 'Target user is not an analyzer' });
+      }
     }
 
     const session = await prisma.session.update({
@@ -97,6 +107,44 @@ export const sessionRoutes: FastifyPluginAsync = async (fastify) => {
       data: {
         analyzerId,
         status: 'ANALYZER_REVIEW',
+        participants: {
+          upsert: {
+            where: { sessionId_userId: { sessionId: id, userId: analyzerId } },
+            create: { userId: analyzerId, roleInSession: 'ANALYZER' },
+            update: {},
+          },
+        },
+      },
+      include: {
+        analyzer: { select: { id: true, displayName: true, phone: true } },
+        claimer: { select: { id: true, displayName: true, phone: true } },
+      },
+    });
+
+    fastify.io.to(id).emit('session:status', { session_id: id, status: 'ANALYZER_REVIEW', claimed_by: null });
+    return reply.send(session);
+  });
+
+  // PATCH /sessions/:id/reassign-analyzer — admin/mentor reassigns an ANALYZER_REVIEW session to a different analyzer
+  fastify.patch('/:id/reassign-analyzer', async (request, reply) => {
+    const { id } = z.object({ id: z.string().uuid() }).parse(request.params);
+    const callerRole = request.user.role;
+
+    if (!['MENTOR', 'ADMIN'].includes(callerRole)) {
+      return reply.status(403).send({ error: 'Only mentors and admins can reassign analyzers' });
+    }
+
+    const { analyzerId } = z.object({ analyzerId: z.string().uuid() }).parse(request.body ?? {});
+
+    const target = await prisma.user.findUnique({ where: { id: analyzerId }, select: { role: true } });
+    if (!target || !['ANALYZER', 'MENTOR', 'ADMIN'].includes(target.role)) {
+      return reply.status(400).send({ error: 'Target user is not an analyzer' });
+    }
+
+    const session = await prisma.session.update({
+      where: { id, status: 'ANALYZER_REVIEW' },
+      data: {
+        analyzerId,
         participants: {
           upsert: {
             where: { sessionId_userId: { sessionId: id, userId: analyzerId } },

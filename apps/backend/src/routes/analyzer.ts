@@ -86,4 +86,14 @@ export const analyzerRoutes: FastifyPluginAsync = async (fastify) => {
     });
     return reply.send(members);
   });
+
+  // GET /v1/analyzer/analyzers — list of analyzers to assign dreams to
+  fastify.get('/analyzers', async (_request, reply) => {
+    const members = await prisma.user.findMany({
+      where: { role: { in: ['ANALYZER', 'MENTOR', 'ADMIN'] } },
+      orderBy: [{ displayName: 'asc' }, { createdAt: 'asc' }],
+      select: { id: true, phone: true, displayName: true, fullName: true, role: true },
+    });
+    return reply.send(members);
+  });
 };

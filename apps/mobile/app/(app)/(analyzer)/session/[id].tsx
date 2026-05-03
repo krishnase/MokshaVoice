@@ -38,7 +38,7 @@ type SessionDetail = {
   claimedBy: string | null;
   claimedAt: string | null;
 };
-type DecoderMember = { id: string; phone: string; displayName: string | null; role: string };
+type Member = { id: string; phone: string; displayName: string | null; fullName?: string | null; role: string };
 
 const STATUS_COLOR: Record<SessionStatus, string> = {
   NEW: Colors.warning,
@@ -60,6 +60,10 @@ function maskPhone(phone: string) {
   return phone.slice(0, 3) + ' ••••• ' + phone.slice(-4);
 }
 
+function memberLabel(m: Member) {
+  return m.fullName ?? m.displayName ?? maskPhone(m.phone);
+}
+
 export default function AnalyzerSession() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
@@ -71,7 +75,8 @@ export default function AnalyzerSession() {
   const { isRecording, recordingDurationMs, isUploading, startRecording, stopAndUpload, cancelRecording, error: recordingError } = useAudioUpload();
 
   const [session, setSession] = useState<SessionDetail | null>(null);
-  const [decoders, setDecoders] = useState<DecoderMember[]>([]);
+  const [decoders, setDecoders] = useState<Member[]>([]);
+  const [analyzers, setAnalyzers] = useState<Member[]>([]);
   const [socketMessages, setSocketMessages] = useState<MessageWithSender[]>([]);
   const [typingUserId, setTypingUserId] = useState<string | null>(null);
   const [textInput, setTextInput] = useState('');
@@ -83,7 +88,8 @@ export default function AnalyzerSession() {
   useEffect(() => {
     if (!id) return;
     api.get<SessionDetail>(`/v1/sessions/${id}`).then(setSession).catch(() => null);
-    api.get<DecoderMember[]>('/v1/analyzer/decoders').then(setDecoders).catch(() => null);
+    api.get<Member[]>('/v1/analyzer/decoders').then(setDecoders).catch(() => null);
+    api.get<Member[]>('/v1/analyzer/analyzers').then(setAnalyzers).catch(() => null);
   }, [id]);
 
   useEffect(() => {
@@ -93,11 +99,14 @@ export default function AnalyzerSession() {
     socket.on('message:new', ({ message }) => {
       setSocketMessages((prev) => prev.some((m) => m.id === message.id) ? prev : [message, ...prev]);
     });
+    socket.on('session:status', ({ status: newStatus }) => {
+      setSession((prev) => prev ? { ...prev, status: newStatus as SessionStatus } : prev);
+    });
     socket.on('typing', ({ user_id, is_typing }) => {
       if (user_id === user?.id) return;
       setTypingUserId(is_typing ? user_id : (prev: string | null) => prev === user_id ? null : prev);
     });
-    return () => { socket.off('message:new'); socket.off('typing'); };
+    return () => { socket.off('message:new'); socket.off('session:status'); socket.off('typing'); };
   }, [id, user?.id]);
 
   const queryMessages = useMemo(() => data?.pages.flatMap((p) => p.data) ?? [], [data]);
@@ -116,23 +125,45 @@ export default function AnalyzerSession() {
     typingTimer.current = setTimeout(() => emitTyping(false), 2000);
   };
 
-  const handleClaim = async () => {
+  const doAssign = useCallback(async (analyzerId?: string) => {
     if (isClaiming) return;
     setIsClaiming(true);
     try {
-      const updated = await api.patch<SessionDetail>(`/v1/sessions/${id}/analyzer-claim`);
+      const body = analyzerId ? { analyzerId } : {};
+      const updated = await api.patch<SessionDetail>(`/v1/sessions/${id}/analyzer-claim`, body);
       setSession(updated);
       void queryClient.invalidateQueries({ queryKey: ['analyzer-queue'] });
+      void queryClient.invalidateQueries({ queryKey: ['analyzer-mine'] });
     } catch (err: unknown) {
-      Alert.alert('Error', (err as { message?: string }).message ?? 'Could not claim this dream.');
+      Alert.alert('Error', (err as { message?: string }).message ?? 'Could not assign this dream.');
     } finally {
       setIsClaiming(false);
     }
-  };
+  }, [isClaiming, id, queryClient]);
+
+  const handleClaimSelf = useCallback(() => doAssign(user?.id), [doAssign, user?.id]);
+
+  const handleAssignToAnalyzer = useCallback(() => {
+    if (analyzers.length === 0) {
+      Alert.alert('No analyzers', 'No other analyzers are available yet.');
+      return;
+    }
+    const labels = analyzers.map(memberLabel);
+
+    if (Platform.OS === 'ios') {
+      ActionSheetIOS.showActionSheetWithOptions(
+        { options: [...labels, 'Cancel'], cancelButtonIndex: labels.length, title: 'Assign to Analyzer' },
+        (index) => { if (index < analyzers.length) void doAssign(analyzers[index]!.id); },
+      );
+    } else {
+      Alert.alert('Assign to Analyzer', undefined, [
+        ...analyzers.map((a, i) => ({ text: labels[i]!, onPress: () => void doAssign(a.id) })),
+        { text: 'Cancel', style: 'cancel' as const },
+      ]);
+    }
+  }, [analyzers, doAssign]);
 
   const handleSubmitAnalysis = useCallback(() => {
-    const options = ['Send to Decoder Queue', 'Assign to Specific Decoder', 'Cancel'];
-
     const doSubmit = async (decoderId?: string) => {
       setIsSubmitting(true);
       try {
@@ -149,8 +180,7 @@ export default function AnalyzerSession() {
     };
 
     const showDecoderPicker = () => {
-      const labels = decoders.map((d) => d.displayName ?? maskPhone(d.phone));
-
+      const labels = decoders.map(memberLabel);
       if (Platform.OS === 'ios') {
         ActionSheetIOS.showActionSheetWithOptions(
           { options: [...labels, 'Cancel'], cancelButtonIndex: labels.length, title: 'Assign to Decoder' },
@@ -166,7 +196,7 @@ export default function AnalyzerSession() {
 
     if (Platform.OS === 'ios') {
       ActionSheetIOS.showActionSheetWithOptions(
-        { options, cancelButtonIndex: 2, title: 'Submit Analysis' },
+        { options: ['Send to Decoder Queue', 'Assign to Specific Decoder', 'Cancel'], cancelButtonIndex: 2, title: 'Submit Analysis' },
         (index) => {
           if (index === 0) void doSubmit();
           if (index === 1) showDecoderPicker();
@@ -210,7 +240,10 @@ export default function AnalyzerSession() {
 
   const renderItem = useCallback(({ item }: { item: MessageWithSender }) => {
     const isMe = item.senderId === user?.id;
-    const senderName = item.sender.displayName ?? (item.sender.role === 'CUSTOMER' ? 'Customer' : item.sender.role === 'ANALYZER' ? 'Analyzer' : 'Decoder');
+    const senderName = item.sender.displayName ?? (
+      item.sender.role === 'CUSTOMER' ? 'Customer' :
+      item.sender.role === 'ANALYZER' ? 'Analyzer' : 'Decoder'
+    );
     const senderRole = item.sender.role;
     if (item.type === 'VOICE') {
       return (
@@ -233,6 +266,7 @@ export default function AnalyzerSession() {
   const status = session?.status ?? 'NEW';
   const isMySession = session?.analyzerId === user?.id;
   const statusColor = STATUS_COLOR[status];
+  const isAdmin = user?.role === 'ADMIN';
 
   return (
     <SafeAreaView style={styles.safe}>
@@ -262,20 +296,31 @@ export default function AnalyzerSession() {
           />
         )}
 
-        {/* NEW: claim to start analysis */}
+        {/* NEW: assign area */}
         {status === 'NEW' && (
           <View style={styles.actionArea}>
-            <Text style={styles.actionHint}>Claim this dream to begin your analysis</Text>
-            <TouchableOpacity
-              style={[styles.claimBtn, isClaiming && styles.btnDisabled]}
-              onPress={handleClaim}
-              disabled={isClaiming}
-            >
-              {isClaiming
-                ? <ActivityIndicator color={Colors.white} size="small" />
-                : <Text style={styles.claimBtnText}>Claim for Analysis</Text>
-              }
-            </TouchableOpacity>
+            <Text style={styles.actionHint}>Assign this dream to begin analysis</Text>
+            <View style={styles.assignRow}>
+              {!isAdmin && (
+                <TouchableOpacity
+                  style={[styles.claimSelfBtn, isClaiming && styles.btnDisabled]}
+                  onPress={handleClaimSelf}
+                  disabled={isClaiming}
+                >
+                  {isClaiming
+                    ? <ActivityIndicator color={Colors.white} size="small" />
+                    : <Text style={styles.claimSelfText}>Claim for Myself</Text>
+                  }
+                </TouchableOpacity>
+              )}
+              <TouchableOpacity
+                style={[styles.assignOtherBtn, isClaiming && styles.btnDisabled, isAdmin && styles.assignOtherBtnFull]}
+                onPress={handleAssignToAnalyzer}
+                disabled={isClaiming}
+              >
+                <Text style={styles.assignOtherText}>Assign to Analyzer ▾</Text>
+              </TouchableOpacity>
+            </View>
           </View>
         )}
 
@@ -318,12 +363,49 @@ export default function AnalyzerSession() {
           </View>
         )}
 
-        {/* ANALYZER_REVIEW: someone else's session */}
+        {/* ANALYZER_REVIEW: someone else's session — admin can still see + reassign */}
         {status === 'ANALYZER_REVIEW' && !isMySession && (
           <View style={styles.bannerArea}>
             <Text style={styles.bannerText}>
               Under review by {session?.analyzer?.displayName ?? 'another analyzer'}
             </Text>
+            {(isAdmin || user?.role === 'MENTOR') && (
+              <TouchableOpacity
+                style={[styles.reassignBtn, isClaiming && styles.btnDisabled]}
+                onPress={() => {
+                  const labels = analyzers.map(memberLabel);
+                  if (Platform.OS === 'ios') {
+                    ActionSheetIOS.showActionSheetWithOptions(
+                      { options: [...labels, 'Cancel'], cancelButtonIndex: labels.length, title: 'Reassign to Analyzer' },
+                      (index) => {
+                        if (index < analyzers.length) {
+                          setIsClaiming(true);
+                          api.patch<SessionDetail>(`/v1/sessions/${id}/reassign-analyzer`, { analyzerId: analyzers[index]!.id })
+                            .then(setSession).catch((e: unknown) => Alert.alert('Error', (e as { message?: string }).message ?? 'Failed'))
+                            .finally(() => setIsClaiming(false));
+                        }
+                      },
+                    );
+                  } else {
+                    Alert.alert('Reassign to Analyzer', undefined, [
+                      ...analyzers.map((a) => ({
+                        text: memberLabel(a),
+                        onPress: () => {
+                          setIsClaiming(true);
+                          api.patch<SessionDetail>(`/v1/sessions/${id}/reassign-analyzer`, { analyzerId: a.id })
+                            .then(setSession).catch((e: unknown) => Alert.alert('Error', (e as { message?: string }).message ?? 'Failed'))
+                            .finally(() => setIsClaiming(false));
+                        },
+                      })),
+                      { text: 'Cancel', style: 'cancel' as const },
+                    ]);
+                  }
+                }}
+                disabled={isClaiming}
+              >
+                <Text style={styles.reassignText}>Reassign to Different Analyzer</Text>
+              </TouchableOpacity>
+            )}
           </View>
         )}
 
@@ -354,21 +436,34 @@ const styles = StyleSheet.create({
   center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   messageList: { paddingHorizontal: 16, paddingVertical: 12, gap: 2 },
   pageLoader: { paddingVertical: 12, alignItems: 'center' },
-  actionArea: { padding: 20, gap: 12, borderTopWidth: 1, borderTopColor: Colors.navyCard, alignItems: 'center' },
+
+  actionArea: { padding: 16, gap: 10, borderTopWidth: 1, borderTopColor: Colors.navyCard },
   actionHint: { color: Colors.gray3, fontSize: 13, fontFamily: 'Inter_400Regular', textAlign: 'center' },
-  claimBtn: {
+  assignRow: { flexDirection: 'row', gap: 10 },
+  claimSelfBtn: {
+    flex: 1,
     backgroundColor: '#8B5CF6',
     borderRadius: 12,
     paddingVertical: 14,
     alignItems: 'center',
-    width: '100%',
     shadowColor: '#8B5CF6',
     shadowOpacity: 0.3,
     shadowRadius: 8,
     shadowOffset: { width: 0, height: 2 },
     elevation: 4,
   },
-  claimBtnText: { color: Colors.white, fontSize: 15, fontFamily: 'Poppins_600SemiBold' },
+  claimSelfText: { color: Colors.white, fontSize: 14, fontFamily: 'Poppins_600SemiBold' },
+  assignOtherBtn: {
+    flex: 1,
+    borderWidth: 1.5,
+    borderColor: '#8B5CF6',
+    borderRadius: 12,
+    paddingVertical: 14,
+    alignItems: 'center',
+  },
+  assignOtherBtnFull: { flex: 2 },
+  assignOtherText: { color: '#8B5CF6', fontSize: 14, fontFamily: 'Poppins_600SemiBold' },
+
   btnDisabled: { opacity: 0.5 },
   inputArea: { borderTopWidth: 1, borderTopColor: Colors.navyCard, paddingHorizontal: 12, paddingTop: 10, paddingBottom: 8, backgroundColor: Colors.navy, gap: 8 },
   textRow: { flexDirection: 'row', alignItems: 'flex-end', gap: 8 },
@@ -378,6 +473,9 @@ const styles = StyleSheet.create({
   submitBtn: { backgroundColor: '#8B5CF6', borderRadius: 10, paddingVertical: 12, alignItems: 'center' },
   submitBtnText: { color: Colors.white, fontSize: 14, fontFamily: 'Inter_600SemiBold' },
   errorText: { color: Colors.error, fontSize: 12, fontFamily: 'Inter_400Regular' },
-  bannerArea: { padding: 16, borderTopWidth: 1, borderTopColor: Colors.navyCard, alignItems: 'center' },
+
+  bannerArea: { padding: 16, borderTopWidth: 1, borderTopColor: Colors.navyCard, alignItems: 'center', gap: 10 },
   bannerText: { color: Colors.gray4, fontSize: 13, fontFamily: 'Inter_500Medium', textAlign: 'center' },
+  reassignBtn: { borderWidth: 1, borderColor: '#8B5CF6', borderRadius: 8, paddingHorizontal: 16, paddingVertical: 8 },
+  reassignText: { color: '#8B5CF6', fontSize: 13, fontFamily: 'Inter_600SemiBold' },
 });
