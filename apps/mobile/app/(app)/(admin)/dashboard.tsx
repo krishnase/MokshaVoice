@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import {
   View,
   Text,
@@ -19,10 +19,13 @@ type Stats = {
   usersToday: number;
   totalDreams: number;
   pendingDreams: number;
+  analyzerReviewDreams: number;
+  pendingDecoderDreams: number;
   inProgressDreams: number;
   completedDreams: number;
   dreamsToday: number;
   totalDecoders: number;
+  totalAnalyzers: number;
 };
 
 type Customer = { id: string; phone: string };
@@ -69,6 +72,13 @@ function StatCard({ label, value, sub, color }: { label: string; value: number |
   );
 }
 
+function sessionRoute(status: string, id: string) {
+  if (status === 'NEW' || status === 'ANALYZER_REVIEW') {
+    return `/(app)/(analyzer)/session/${id}`;
+  }
+  return `/(app)/(decoder)/session/${id}`;
+}
+
 export default function AdminDashboard() {
   const router = useRouter();
   const [lastUpdated, setLastUpdated] = useState(new Date());
@@ -77,8 +87,11 @@ export default function AdminDashboard() {
     queryKey: ['admin-stats'],
     queryFn: () => api.get<Stats>('/v1/admin/stats'),
     refetchInterval: 60_000,
-    onSuccess: () => setLastUpdated(new Date()),
-  } as Parameters<typeof useQuery>[0]);
+  });
+
+  useEffect(() => {
+    if (statsQuery.data) setLastUpdated(new Date());
+  }, [statsQuery.data]);
 
   const pendingQuery = useQuery({
     queryKey: ['admin-pending'],
@@ -137,15 +150,17 @@ export default function AdminDashboard() {
             <View style={styles.statsGrid}>
               <StatCard label="Total Users" value={stats.totalUsers} sub={`+${stats.usersToday} today`} color={Colors.orange} />
               <StatCard label="Dreams Submitted" value={stats.totalDreams} sub={`+${stats.dreamsToday} today`} color="#3B82F6" />
-              <StatCard label="Pending Analysis" value={stats.pendingDreams} color={Colors.warning} />
-              <StatCard label="In Progress" value={stats.inProgressDreams} color={Colors.gold} />
+              <StatCard label="Needs Analyzer" value={stats.pendingDreams} color={Colors.warning} />
+              <StatCard label="Being Analyzed" value={stats.analyzerReviewDreams} color="#8B5CF6" />
+              <StatCard label="Pending Decoder" value={stats.pendingDecoderDreams} color={Colors.gold} />
+              <StatCard label="In Progress" value={stats.inProgressDreams} color="#3B82F6" />
               <StatCard label="Completed" value={stats.completedDreams} color="#10B981" />
               <StatCard label="Decoders" value={stats.totalDecoders} color={Colors.pink} />
             </View>
           </>
         ) : null}
 
-        {/* Pending dreams */}
+        {/* Pending dreams — needs analyzer */}
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>Needs Attention</Text>
           <TouchableOpacity onPress={() => router.push('/(app)/(admin)/dreams')}>
@@ -163,7 +178,7 @@ export default function AdminDashboard() {
             <TouchableOpacity
               key={s.id}
               style={styles.listRow}
-              onPress={() => router.push(`/(app)/(decoder)/session/${s.id}`)}
+              onPress={() => router.push(sessionRoute(s.status, s.id) as never)}
               activeOpacity={0.75}
             >
               <View style={{ flex: 1 }}>
@@ -214,6 +229,10 @@ export default function AdminDashboard() {
           <TouchableOpacity style={styles.actionBtn} onPress={() => router.push('/(app)/(admin)/dreams')} activeOpacity={0.75}>
             <Text style={styles.actionIcon}>🌙</Text>
             <Text style={styles.actionLabel}>All Dreams</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.actionBtn} onPress={() => router.push('/(app)/(admin)/users?role=ANALYZER')} activeOpacity={0.75}>
+            <Text style={styles.actionIcon}>🔍</Text>
+            <Text style={styles.actionLabel}>Analyzers</Text>
           </TouchableOpacity>
           <TouchableOpacity style={styles.actionBtn} onPress={() => router.push('/(app)/(admin)/users?role=DECODER')} activeOpacity={0.75}>
             <Text style={styles.actionIcon}>🔮</Text>
@@ -283,8 +302,17 @@ const styles = StyleSheet.create({
   premiumBadge: { backgroundColor: Colors.goldDim, borderRadius: 6, paddingHorizontal: 7, paddingVertical: 3 },
   premiumText: { color: Colors.gold, fontSize: 10, fontFamily: 'Inter_600SemiBold' },
 
-  actionsGrid: { flexDirection: 'row', gap: 10, marginTop: 4 },
-  actionBtn: { flex: 1, backgroundColor: Colors.navyCard, borderRadius: 12, padding: 16, alignItems: 'center', gap: 8, borderWidth: 1, borderColor: Colors.gold + '22' },
+  actionsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginTop: 4 },
+  actionBtn: {
+    width: '47%',
+    backgroundColor: Colors.navyCard,
+    borderRadius: 12,
+    padding: 16,
+    alignItems: 'center',
+    gap: 8,
+    borderWidth: 1,
+    borderColor: Colors.gold + '22',
+  },
   actionIcon: { fontSize: 28 },
   actionLabel: { color: Colors.gray3, fontSize: 12, fontFamily: 'Inter_600SemiBold', textAlign: 'center' },
 });

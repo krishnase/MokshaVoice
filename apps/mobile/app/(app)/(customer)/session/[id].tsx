@@ -34,9 +34,11 @@ type SessionDetail = {
 };
 
 const STATUS_BAR: Record<SessionStatus, { label: string; color: string; bg: string }> = {
-  NEW:         { label: 'Waiting for a decoder…',          color: Colors.warning,  bg: Colors.goldDim + '44' },
-  IN_PROGRESS: { label: 'Your decoder is working on this', color: '#3B82F6', bg: '#0F2940' },
-  COMPLETED:   { label: '✓ Analysis complete',             color: '#10B981',  bg: '#064024' + '44' },
+  NEW:              { label: 'Waiting for an analyzer…',         color: Colors.warning,  bg: Colors.goldDim + '44' },
+  ANALYZER_REVIEW:  { label: 'Being analyzed…',                  color: '#8B5CF6', bg: '#2D1B69' + '44' },
+  PENDING_DECODER:  { label: 'Waiting for a decoder…',           color: Colors.gold,   bg: Colors.goldDim },
+  IN_PROGRESS:      { label: 'Your decoder is working on this',  color: '#3B82F6', bg: '#0F2940' },
+  COMPLETED:        { label: '✓ Analysis complete',              color: '#10B981',  bg: '#064024' + '44' },
 };
 
 function maskPhone(phone: string) {
@@ -282,7 +284,7 @@ export default function SessionChat() {
                 />
                 <TextInput
                   style={styles.input}
-                  placeholder={status === 'NEW' ? 'Waiting for a decoder to join…' : 'Reply to your decoder…'}
+                  placeholder={status === 'NEW' || status === 'ANALYZER_REVIEW' ? 'Waiting for an analyzer…' : status === 'PENDING_DECODER' ? 'Waiting for a decoder…' : 'Reply to your decoder…'}
                   placeholderTextColor={Colors.gray4}
                   value={textInput}
                   onChangeText={handleTextChange}

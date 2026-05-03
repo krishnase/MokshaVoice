@@ -19,8 +19,9 @@ import { useInfiniteQuery, useQuery, useQueryClient } from '@tanstack/react-quer
 import { api } from '@/src/lib/api';
 import { Colors } from '@/src/theme';
 
-type Role = 'CUSTOMER' | 'DECODER' | 'MENTOR' | 'ADMIN';
+type Role = 'CUSTOMER' | 'DECODER' | 'ANALYZER' | 'MENTOR' | 'ADMIN';
 type AssignedMentor = { id: string; name: string };
+type AssignedAnalyzer = { id: string; phone: string; displayName: string | null; fullName: string | null };
 type AdminUser = {
   id: string;
   phone: string;
@@ -30,17 +31,19 @@ type AdminUser = {
   createdAt: string;
   subscription: { plan: string; status: string; dreamsUsed: number } | null;
   assignedMentor: AssignedMentor | null;
+  assignedAnalyzer: AssignedAnalyzer | null;
   _count: { sessions: number };
 };
 type UsersPage = { data: AdminUser[]; nextCursor: string | null; hasMore: boolean };
 type MentorListItem = { id: string; name: string; active: boolean };
 
-const ROLES: Role[] = ['CUSTOMER', 'DECODER', 'MENTOR', 'ADMIN'];
+const ROLES: Role[] = ['CUSTOMER', 'DECODER', 'ANALYZER', 'MENTOR', 'ADMIN'];
 const ROLE_FILTERS = [{ label: 'All', value: undefined }, ...ROLES.map((r) => ({ label: r, value: r }))] as const;
 
 const ROLE_COLOR: Record<Role, string> = {
   CUSTOMER: Colors.gray3,
   DECODER: Colors.gold,
+  ANALYZER: '#8B5CF6',
   MENTOR: '#3B82F6',
   ADMIN: Colors.error,
 };
@@ -58,6 +61,10 @@ function timeAgo(iso: string) {
   return `${days}d ago`;
 }
 
+function analyzerLabel(a: AssignedAnalyzer) {
+  return a.fullName ?? a.displayName ?? maskPhone(a.phone);
+}
+
 export default function AdminUsers() {
   const router = useRouter();
   const params = useLocalSearchParams<{ role?: string }>();
@@ -67,6 +74,7 @@ export default function AdminUsers() {
   const [search, setSearch] = useState('');
   const [updatingId, setUpdatingId] = useState<string | null>(null);
   const [mentorPickerUser, setMentorPickerUser] = useState<AdminUser | null>(null);
+  const [analyzerPickerUser, setAnalyzerPickerUser] = useState<AdminUser | null>(null);
 
   const query = useInfiniteQuery({
     queryKey: ['admin-users', roleFilter, search],
@@ -86,11 +94,14 @@ export default function AdminUsers() {
     queryFn: () => api.get<{ mentors: MentorListItem[] }>('/v1/admin/mentors'),
   });
 
+  const analyzersQuery = useQuery({
+    queryKey: ['admin-analyzers-list'],
+    queryFn: () => api.get<UsersPage>('/v1/admin/users?role=ANALYZER&limit=50'),
+  });
+
   const users = useMemo(() => query.data?.pages.flatMap((p) => p.data) ?? [], [query.data]);
-  const activeMentors = useMemo(
-    () => (mentorsQuery.data?.mentors ?? []).filter((m) => m.active),
-    [mentorsQuery.data],
-  );
+  const allMentors = useMemo(() => mentorsQuery.data?.mentors ?? [], [mentorsQuery.data]);
+  const allAnalyzers = useMemo(() => analyzersQuery.data?.data ?? [], [analyzersQuery.data]);
 
   const changeRole = useCallback(async (user: AdminUser) => {
     const options = ROLES.filter((r) => r !== user.role);
@@ -129,12 +140,12 @@ export default function AdminUsers() {
   };
 
   const assignMentor = useCallback((user: AdminUser) => {
-    if (activeMentors.length === 0) {
-      Alert.alert('No active mentors', 'Add mentors first from the Mentors screen.');
+    if (allMentors.length === 0) {
+      Alert.alert('No mentors', 'Add mentors first from the Mentors screen.');
       return;
     }
     setMentorPickerUser(user);
-  }, [activeMentors]);
+  }, [allMentors]);
 
   const applyMentorChange = async (userId: string, mentorId: string | null) => {
     setUpdatingId(userId);
@@ -143,6 +154,26 @@ export default function AdminUsers() {
       void queryClient.invalidateQueries({ queryKey: ['admin-users'] });
     } catch (err: unknown) {
       Alert.alert('Error', (err as { message?: string }).message ?? 'Could not assign mentor.');
+    } finally {
+      setUpdatingId(null);
+    }
+  };
+
+  const assignAnalyzer = useCallback((user: AdminUser) => {
+    if (allAnalyzers.length === 0) {
+      Alert.alert('No analyzers', 'No users with the Analyzer role exist yet.');
+      return;
+    }
+    setAnalyzerPickerUser(user);
+  }, [allAnalyzers]);
+
+  const applyAnalyzerChange = async (userId: string, analyzerId: string | null) => {
+    setUpdatingId(userId);
+    try {
+      await api.patch(`/v1/admin/users/${userId}/analyzer`, { analyzerId });
+      void queryClient.invalidateQueries({ queryKey: ['admin-users'] });
+    } catch (err: unknown) {
+      Alert.alert('Error', (err as { message?: string }).message ?? 'Could not assign analyzer.');
     } finally {
       setUpdatingId(null);
     }
@@ -164,14 +195,21 @@ export default function AdminUsers() {
             <Text style={styles.meta}>
               Joined {timeAgo(item.createdAt)} · {item._count.sessions} dream{item._count.sessions !== 1 ? 's' : ''}
             </Text>
-            {/* Assigned mentor chip */}
             {item.role === 'CUSTOMER' && (
-              <View style={styles.mentorChipRow}>
-                <Text style={styles.mentorChipLabel}>Mentor: </Text>
-                <Text style={[styles.mentorChipValue, !item.assignedMentor && styles.mentorChipNone]}>
-                  {item.assignedMentor ? item.assignedMentor.name : 'Not assigned'}
-                </Text>
-              </View>
+              <>
+                <View style={styles.assignRow}>
+                  <Text style={styles.assignLabel}>Mentor: </Text>
+                  <Text style={[styles.assignValue, !item.assignedMentor && styles.assignNone]}>
+                    {item.assignedMentor ? item.assignedMentor.name : 'Not assigned'}
+                  </Text>
+                </View>
+                <View style={styles.assignRow}>
+                  <Text style={styles.assignLabel}>Analyzer: </Text>
+                  <Text style={[styles.assignValue, { color: '#8B5CF6' }, !item.assignedAnalyzer && styles.assignNone]}>
+                    {item.assignedAnalyzer ? analyzerLabel(item.assignedAnalyzer) : 'Not assigned'}
+                  </Text>
+                </View>
+              </>
             )}
           </View>
           <View style={{ alignItems: 'flex-end', gap: 6 }}>
@@ -199,20 +237,31 @@ export default function AdminUsers() {
           </TouchableOpacity>
 
           {item.role === 'CUSTOMER' && (
-            <TouchableOpacity
-              style={[styles.actionBtn, styles.mentorBtn, isUpdating && styles.btnDisabled]}
-              onPress={() => assignMentor(item)}
-              disabled={isUpdating}
-            >
-              <Text style={styles.mentorBtnText}>
-                {item.assignedMentor ? 'Reassign Mentor' : 'Assign Mentor'}
-              </Text>
-            </TouchableOpacity>
+            <>
+              <TouchableOpacity
+                style={[styles.actionBtn, styles.mentorBtn, isUpdating && styles.btnDisabled]}
+                onPress={() => assignMentor(item)}
+                disabled={isUpdating}
+              >
+                <Text style={styles.mentorBtnText}>
+                  {item.assignedMentor ? 'Reassign Mentor' : 'Assign Mentor'}
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.actionBtn, styles.analyzerBtn, isUpdating && styles.btnDisabled]}
+                onPress={() => assignAnalyzer(item)}
+                disabled={isUpdating}
+              >
+                <Text style={styles.analyzerBtnText}>
+                  {item.assignedAnalyzer ? 'Reassign Analyzer' : 'Assign Analyzer'}
+                </Text>
+              </TouchableOpacity>
+            </>
           )}
         </View>
       </View>
     );
-  }, [updatingId, changeRole, assignMentor]);
+  }, [updatingId, changeRole, assignMentor, assignAnalyzer]);
 
   return (
     <SafeAreaView style={styles.safe}>
@@ -280,12 +329,13 @@ export default function AdminUsers() {
               </Text>
             )}
 
-            {activeMentors.map((m) => (
+            {allMentors.map((m) => (
               <TouchableOpacity
                 key={m.id}
                 style={[
                   styles.pickerOption,
                   mentorPickerUser?.assignedMentor?.id === m.id && styles.pickerOptionActive,
+                  !m.active && styles.pickerOptionInactive,
                 ]}
                 onPress={async () => {
                   const uid = mentorPickerUser!.id;
@@ -293,7 +343,9 @@ export default function AdminUsers() {
                   await applyMentorChange(uid, m.id);
                 }}
               >
-                <Text style={styles.pickerOptionText}>{m.name}</Text>
+                <Text style={[styles.pickerOptionText, !m.active && styles.pickerOptionTextInactive]}>
+                  {m.name}{!m.active ? ' (inactive)' : ''}
+                </Text>
                 {mentorPickerUser?.assignedMentor?.id === m.id && (
                   <Text style={styles.pickerCheck}>✓</Text>
                 )}
@@ -314,6 +366,67 @@ export default function AdminUsers() {
             )}
 
             <TouchableOpacity style={styles.pickerCancel} onPress={() => setMentorPickerUser(null)}>
+              <Text style={styles.pickerCancelText}>Cancel</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Analyzer picker modal */}
+      <Modal visible={!!analyzerPickerUser} animationType="slide" transparent onRequestClose={() => setAnalyzerPickerUser(null)}>
+        <View style={styles.pickerOverlay}>
+          <View style={styles.pickerSheet}>
+            <View style={styles.pickerHeader}>
+              <Text style={styles.pickerTitle}>Assign Analyzer</Text>
+              <TouchableOpacity onPress={() => setAnalyzerPickerUser(null)} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+                <Text style={styles.pickerClose}>✕</Text>
+              </TouchableOpacity>
+            </View>
+            {analyzerPickerUser && (
+              <Text style={styles.pickerSub}>
+                {analyzerPickerUser.fullName ?? maskPhone(analyzerPickerUser.phone)}
+                {analyzerPickerUser.assignedAnalyzer
+                  ? ` · currently ${analyzerLabel(analyzerPickerUser.assignedAnalyzer)}`
+                  : ''}
+              </Text>
+            )}
+
+            {allAnalyzers.map((a) => (
+              <TouchableOpacity
+                key={a.id}
+                style={[
+                  styles.pickerOption,
+                  analyzerPickerUser?.assignedAnalyzer?.id === a.id && styles.pickerOptionAnalyzerActive,
+                ]}
+                onPress={async () => {
+                  const uid = analyzerPickerUser!.id;
+                  setAnalyzerPickerUser(null);
+                  await applyAnalyzerChange(uid, a.id);
+                }}
+              >
+                <Text style={styles.pickerOptionText}>
+                  {a.fullName ?? a.displayName ?? maskPhone(a.phone)}
+                </Text>
+                {analyzerPickerUser?.assignedAnalyzer?.id === a.id && (
+                  <Text style={styles.pickerCheckAnalyzer}>✓</Text>
+                )}
+              </TouchableOpacity>
+            ))}
+
+            {analyzerPickerUser?.assignedAnalyzer && (
+              <TouchableOpacity
+                style={styles.pickerRemove}
+                onPress={async () => {
+                  const uid = analyzerPickerUser!.id;
+                  setAnalyzerPickerUser(null);
+                  await applyAnalyzerChange(uid, null);
+                }}
+              >
+                <Text style={styles.pickerRemoveText}>Remove assigned analyzer</Text>
+              </TouchableOpacity>
+            )}
+
+            <TouchableOpacity style={styles.pickerCancel} onPress={() => setAnalyzerPickerUser(null)}>
               <Text style={styles.pickerCancelText}>Cancel</Text>
             </TouchableOpacity>
           </View>
@@ -346,10 +459,10 @@ const styles = StyleSheet.create({
   displayName: { color: Colors.white, fontSize: 15, fontFamily: 'Inter_600SemiBold' },
   phone: { color: Colors.gray3, fontSize: 12, fontFamily: 'Inter_400Regular', marginTop: 2 },
   meta: { color: Colors.gray4, fontSize: 12, fontFamily: 'Inter_400Regular', marginTop: 3 },
-  mentorChipRow: { flexDirection: 'row', marginTop: 5, alignItems: 'center' },
-  mentorChipLabel: { color: Colors.gray4, fontSize: 12, fontFamily: 'Inter_400Regular' },
-  mentorChipValue: { color: Colors.gold, fontSize: 12, fontFamily: 'Inter_600SemiBold' },
-  mentorChipNone: { color: Colors.gray4, fontFamily: 'Inter_400Regular' },
+  assignRow: { flexDirection: 'row', marginTop: 4, alignItems: 'center' },
+  assignLabel: { color: Colors.gray4, fontSize: 12, fontFamily: 'Inter_400Regular' },
+  assignValue: { color: Colors.gold, fontSize: 12, fontFamily: 'Inter_600SemiBold' },
+  assignNone: { color: Colors.gray4, fontFamily: 'Inter_400Regular' },
   roleBadge: { borderRadius: 6, borderWidth: 1, paddingHorizontal: 8, paddingVertical: 3 },
   roleText: { fontSize: 10, fontFamily: 'Inter_600SemiBold' },
   planBadge: { backgroundColor: Colors.orangeDim, borderRadius: 6, paddingHorizontal: 7, paddingVertical: 2 },
@@ -380,8 +493,12 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   pickerOptionActive: { backgroundColor: Colors.orangeDim, borderWidth: 1, borderColor: Colors.orange },
+  pickerOptionAnalyzerActive: { backgroundColor: '#8B5CF622', borderWidth: 1, borderColor: '#8B5CF6' },
   pickerOptionText: { color: Colors.white, fontSize: 16, fontFamily: 'Inter_500Medium' },
+  pickerOptionInactive: { opacity: 0.5 },
+  pickerOptionTextInactive: { color: Colors.gray3 },
   pickerCheck: { color: Colors.orange, fontSize: 16, fontFamily: 'Inter_600SemiBold' },
+  pickerCheckAnalyzer: { color: '#8B5CF6', fontSize: 16, fontFamily: 'Inter_600SemiBold' },
   pickerRemove: { paddingVertical: 14, alignItems: 'center', marginTop: 4 },
   pickerRemoveText: { color: Colors.error, fontSize: 14, fontFamily: 'Inter_500Medium' },
   pickerCancel: {
@@ -394,10 +511,12 @@ const styles = StyleSheet.create({
   },
   pickerCancelText: { color: Colors.gray3, fontSize: 15, fontFamily: 'Inter_600SemiBold' },
 
-  cardActions: { flexDirection: 'row', gap: 8 },
-  actionBtn: { flex: 1, borderWidth: 1, borderColor: Colors.orange + '44', borderRadius: 8, paddingVertical: 8, alignItems: 'center' },
-  mentorBtn: { borderColor: Colors.gold + '66', flex: 1.3 },
+  cardActions: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  actionBtn: { borderWidth: 1, borderColor: Colors.orange + '44', borderRadius: 8, paddingVertical: 8, paddingHorizontal: 12, alignItems: 'center' },
+  mentorBtn: { borderColor: Colors.gold + '66' },
+  analyzerBtn: { borderColor: '#8B5CF6' + '66' },
   btnDisabled: { opacity: 0.5 },
   actionBtnText: { color: Colors.orange, fontSize: 13, fontFamily: 'Inter_600SemiBold' },
   mentorBtnText: { color: Colors.gold, fontSize: 13, fontFamily: 'Inter_600SemiBold' },
+  analyzerBtnText: { color: '#8B5CF6', fontSize: 13, fontFamily: 'Inter_600SemiBold' },
 });

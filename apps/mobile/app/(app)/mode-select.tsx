@@ -30,6 +30,7 @@ export default function ModeSelect() {
     ]);
   };
 
+  const isAnalyzer = user?.role === 'ANALYZER' || user?.role === 'MENTOR' || user?.role === 'ADMIN';
   const isDecoder = user?.role === 'DECODER' || user?.role === 'MENTOR' || user?.role === 'ADMIN';
   const isAdmin = user?.role === 'ADMIN';
 
@@ -41,10 +42,17 @@ export default function ModeSelect() {
       route: '/(app)/(customer)',
       color: Colors.orange,
     },
+    ...(isAnalyzer ? [{
+      icon: '🔮',
+      title: 'Analyzer',
+      subtitle: 'Review new dreams and do initial analysis',
+      route: '/(app)/(analyzer)/queue',
+      color: '#8B5CF6',
+    }] : []),
     ...(isDecoder ? [{
       icon: '🔍',
       title: 'Decoder',
-      subtitle: 'View and interpret the dream queue',
+      subtitle: 'Interpret analyzed dreams and reply to customers',
       route: '/(app)/(decoder)/queue',
       color: Colors.gold,
     }] : []),

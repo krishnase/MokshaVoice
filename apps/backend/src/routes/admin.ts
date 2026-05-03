@@ -16,19 +16,25 @@ export const adminRoutes: FastifyPluginAsync = async (fastify) => {
       usersToday,
       totalDreams,
       pendingDreams,
+      analyzerReviewDreams,
+      pendingDecoderDreams,
       inProgressDreams,
       completedDreams,
       dreamsToday,
       totalDecoders,
+      totalAnalyzers,
     ] = await Promise.all([
       prisma.user.count(),
       prisma.user.count({ where: { createdAt: { gte: startOfDay } } }),
       prisma.session.count(),
       prisma.session.count({ where: { status: 'NEW' } }),
+      prisma.session.count({ where: { status: 'ANALYZER_REVIEW' } }),
+      prisma.session.count({ where: { status: 'PENDING_DECODER' } }),
       prisma.session.count({ where: { status: 'IN_PROGRESS' } }),
       prisma.session.count({ where: { status: 'COMPLETED' } }),
       prisma.session.count({ where: { createdAt: { gte: startOfDay } } }),
       prisma.user.count({ where: { role: { in: ['DECODER', 'MENTOR'] } } }),
+      prisma.user.count({ where: { role: { in: ['ANALYZER', 'MENTOR', 'ADMIN'] } } }),
     ]);
 
     return reply.send({
@@ -36,17 +42,20 @@ export const adminRoutes: FastifyPluginAsync = async (fastify) => {
       usersToday,
       totalDreams,
       pendingDreams,
+      analyzerReviewDreams,
+      pendingDecoderDreams,
       inProgressDreams,
       completedDreams,
       dreamsToday,
       totalDecoders,
+      totalAnalyzers,
     });
   });
 
   // GET /v1/admin/users?role=&search=&cursor=&limit=
   fastify.get('/users', async (request, reply) => {
     const q = z.object({
-      role: z.enum(['CUSTOMER', 'DECODER', 'MENTOR', 'ADMIN']).optional(),
+      role: z.enum(['CUSTOMER', 'DECODER', 'ANALYZER', 'MENTOR', 'ADMIN']).optional(),
       search: z.string().optional(),
       cursor: z.string().optional(),
       limit: z.coerce.number().min(1).max(50).default(20),
@@ -76,6 +85,7 @@ export const adminRoutes: FastifyPluginAsync = async (fastify) => {
         createdAt: true,
         subscription: { select: { plan: true, status: true, dreamsUsed: true } },
         assignedMentor: { select: { id: true, name: true } },
+        assignedAnalyzer: { select: { id: true, phone: true, displayName: true, fullName: true } },
         _count: { select: { sessions: true } },
       },
     });
@@ -91,7 +101,7 @@ export const adminRoutes: FastifyPluginAsync = async (fastify) => {
   fastify.patch('/users/:id/role', async (request, reply) => {
     const { id } = z.object({ id: z.string().uuid() }).parse(request.params);
     const { role } = z.object({
-      role: z.enum(['CUSTOMER', 'DECODER', 'MENTOR', 'ADMIN']),
+      role: z.enum(['CUSTOMER', 'DECODER', 'ANALYZER', 'MENTOR', 'ADMIN']),
     }).parse(request.body);
 
     const user = await prisma.user.update({
@@ -123,6 +133,36 @@ export const adminRoutes: FastifyPluginAsync = async (fastify) => {
         phone: true,
         fullName: true,
         assignedMentor: { select: { id: true, name: true } },
+      },
+    });
+    return reply.send(user);
+  });
+
+  // PATCH /v1/admin/users/:id/analyzer — assign (or unassign) a dedicated analyzer
+  fastify.patch('/users/:id/analyzer', async (request, reply) => {
+    const { id } = z.object({ id: z.string().uuid() }).parse(request.params);
+    const { analyzerId } = z.object({
+      analyzerId: z.string().uuid().nullable(),
+    }).parse(request.body);
+
+    if (analyzerId) {
+      const analyzer = await prisma.user.findUnique({
+        where: { id: analyzerId },
+        select: { role: true },
+      });
+      if (!analyzer || !['ANALYZER', 'MENTOR', 'ADMIN'].includes(analyzer.role)) {
+        return reply.status(404).send({ statusCode: 404, error: 'Not Found', message: 'Analyzer not found.' });
+      }
+    }
+
+    const user = await prisma.user.update({
+      where: { id },
+      data: { assignedAnalyzerId: analyzerId },
+      select: {
+        id: true,
+        phone: true,
+        fullName: true,
+        assignedAnalyzer: { select: { id: true, phone: true, displayName: true, fullName: true } },
       },
     });
     return reply.send(user);
@@ -183,7 +223,7 @@ export const adminRoutes: FastifyPluginAsync = async (fastify) => {
   // GET /v1/admin/dreams?status=&cursor=&limit=
   fastify.get('/dreams', async (request, reply) => {
     const q = z.object({
-      status: z.enum(['NEW', 'IN_PROGRESS', 'COMPLETED']).optional(),
+      status: z.enum(['NEW', 'ANALYZER_REVIEW', 'PENDING_DECODER', 'IN_PROGRESS', 'COMPLETED']).optional(),
       cursor: z.string().optional(),
       limit: z.coerce.number().min(1).max(50).default(20),
     }).parse(request.query);
@@ -195,6 +235,7 @@ export const adminRoutes: FastifyPluginAsync = async (fastify) => {
       ...(q.cursor ? { cursor: { id: q.cursor }, skip: 1 } : {}),
       include: {
         customer: { select: { id: true, phone: true } },
+        analyzer: { select: { id: true, phone: true, displayName: true } },
         claimer: { select: { id: true, phone: true, displayName: true } },
         _count: { select: { messages: true } },
       },

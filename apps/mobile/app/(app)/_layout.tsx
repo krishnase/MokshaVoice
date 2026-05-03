@@ -23,7 +23,7 @@ const RC_API_KEY = Platform.select({
   default: process.env['EXPO_PUBLIC_RC_IOS_KEY']!,
 });
 
-const NON_CUSTOMER_VALID_SEGMENTS = ['(customer)', '(decoder)', '(admin)', 'notifications', 'mode-select'];
+const NON_CUSTOMER_VALID_SEGMENTS = ['(customer)', '(decoder)', '(analyzer)', '(admin)', 'notifications', 'mode-select'];
 
 export default function AppLayout() {
   const { user, isHydrated } = useAuthStore();
@@ -120,6 +120,7 @@ export default function AppLayout() {
       <Stack.Screen name="mode-select" />
       <Stack.Screen name="(customer)" />
       <Stack.Screen name="(decoder)" />
+      <Stack.Screen name="(analyzer)" />
       <Stack.Screen name="(admin)" />
       <Stack.Screen name="notifications" />
     </Stack>

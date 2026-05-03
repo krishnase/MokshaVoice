@@ -14,9 +14,10 @@ import { useInfiniteQuery } from '@tanstack/react-query';
 import { api } from '@/src/lib/api';
 import { Colors } from '@/src/theme';
 
-type SessionStatus = 'NEW' | 'IN_PROGRESS' | 'COMPLETED';
+type SessionStatus = 'NEW' | 'ANALYZER_REVIEW' | 'PENDING_DECODER' | 'IN_PROGRESS' | 'COMPLETED';
 type Customer = { id: string; phone: string };
 type Claimer = { id: string; phone: string; displayName: string | null } | null;
+type Analyzer = { id: string; phone: string; displayName: string | null } | null;
 type AdminSession = {
   id: string;
   status: SessionStatus;
@@ -24,25 +25,32 @@ type AdminSession = {
   createdAt: string;
   completedAt: string | null;
   customer: Customer;
+  analyzer: Analyzer;
   claimer: Claimer;
   _count: { messages: number };
 };
 type SessionsPage = { data: AdminSession[]; nextCursor: string | null; hasMore: boolean };
 
-const FILTERS = [
+const FILTERS: { label: string; value: SessionStatus | undefined }[] = [
   { label: 'All', value: undefined },
-  { label: 'Pending', value: 'NEW' as SessionStatus },
-  { label: 'In Progress', value: 'IN_PROGRESS' as SessionStatus },
-  { label: 'Completed', value: 'COMPLETED' as SessionStatus },
+  { label: 'Needs Analyzer', value: 'NEW' },
+  { label: 'Analyzing', value: 'ANALYZER_REVIEW' },
+  { label: 'Pending Decoder', value: 'PENDING_DECODER' },
+  { label: 'In Progress', value: 'IN_PROGRESS' },
+  { label: 'Completed', value: 'COMPLETED' },
 ];
 
 const STATUS_COLOR: Record<SessionStatus, string> = {
   NEW: Colors.warning,
+  ANALYZER_REVIEW: '#8B5CF6',
+  PENDING_DECODER: Colors.gold,
   IN_PROGRESS: '#3B82F6',
   COMPLETED: '#10B981',
 };
 const STATUS_LABEL: Record<SessionStatus, string> = {
-  NEW: 'Pending',
+  NEW: 'Needs Analyzer',
+  ANALYZER_REVIEW: 'Analyzing',
+  PENDING_DECODER: 'Pending Decoder',
   IN_PROGRESS: 'In Progress',
   COMPLETED: 'Done',
 };
@@ -60,6 +68,13 @@ function timeAgo(iso: string) {
   const hrs = Math.floor(mins / 60);
   if (hrs < 24) return `${hrs}h ago`;
   return `${Math.floor(hrs / 24)}d ago`;
+}
+
+function sessionRoute(status: SessionStatus, id: string) {
+  if (status === 'NEW' || status === 'ANALYZER_REVIEW') {
+    return `/(app)/(analyzer)/session/${id}`;
+  }
+  return `/(app)/(decoder)/session/${id}`;
 }
 
 export default function AdminDreams() {
@@ -85,7 +100,7 @@ export default function AdminDreams() {
     return (
       <TouchableOpacity
         style={styles.card}
-        onPress={() => router.push(`/(app)/(decoder)/session/${item.id}`)}
+        onPress={() => router.push(sessionRoute(item.status, item.id) as never)}
         activeOpacity={0.75}
       >
         <View style={styles.cardTop}>
@@ -98,6 +113,12 @@ export default function AdminDreams() {
           <Text style={styles.label}>Customer</Text>
           <Text style={styles.value}>{maskPhone(item.customer.phone)}</Text>
         </View>
+        {item.analyzer && (
+          <View style={styles.cardRow}>
+            <Text style={styles.label}>Analyzer</Text>
+            <Text style={styles.value}>{item.analyzer.displayName ?? maskPhone(item.analyzer.phone)}</Text>
+          </View>
+        )}
         {item.claimer && (
           <View style={styles.cardRow}>
             <Text style={styles.label}>Decoder</Text>
@@ -161,10 +182,10 @@ const styles = StyleSheet.create({
   backBtn: { paddingRight: 8 },
   backText: { color: Colors.orange, fontSize: 15, fontFamily: 'Inter_500Medium' },
   title: { color: Colors.white, fontSize: 18, fontFamily: 'Poppins_600SemiBold' },
-  filterRow: { flexDirection: 'row', paddingHorizontal: 12, gap: 6, marginBottom: 8 },
-  filterPill: { paddingHorizontal: 14, paddingVertical: 6, borderRadius: 16, backgroundColor: Colors.navyCard, borderWidth: 1, borderColor: Colors.gold + '33' },
+  filterRow: { flexDirection: 'row', flexWrap: 'wrap', paddingHorizontal: 12, gap: 6, marginBottom: 8 },
+  filterPill: { paddingHorizontal: 12, paddingVertical: 5, borderRadius: 16, backgroundColor: Colors.navyCard, borderWidth: 1, borderColor: Colors.gold + '33' },
   filterPillActive: { backgroundColor: Colors.orangeDim, borderColor: Colors.orange },
-  filterText: { color: Colors.gray3, fontSize: 13, fontFamily: 'Inter_500Medium' },
+  filterText: { color: Colors.gray3, fontSize: 12, fontFamily: 'Inter_500Medium' },
   filterTextActive: { color: Colors.orangeLight },
   list: { paddingBottom: 40 },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
@@ -176,7 +197,7 @@ const styles = StyleSheet.create({
   statusBadge: { borderRadius: 6, borderWidth: 1, paddingHorizontal: 8, paddingVertical: 3 },
   statusText: { fontSize: 11, fontFamily: 'Inter_600SemiBold' },
   cardRow: { flexDirection: 'row', gap: 8 },
-  label: { color: Colors.gray4, fontSize: 12, fontFamily: 'Inter_400Regular', width: 60 },
+  label: { color: Colors.gray4, fontSize: 12, fontFamily: 'Inter_400Regular', width: 68 },
   value: { color: Colors.gray3, fontSize: 12, fontFamily: 'Inter_400Regular', flex: 1 },
   cardFooter: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, alignItems: 'center' },
   meta: { color: Colors.gray4, fontSize: 11, fontFamily: 'Inter_400Regular' },

@@ -49,7 +49,7 @@ async function tryAutoAssign(sessionId: string, customerId: string): Promise<boo
     where: { id: previous.claimedBy },
     select: { role: true },
   });
-  if (!decoder || !['DECODER', 'MENTOR', 'ADMIN'].includes(decoder.role)) return false;
+  if (!decoder || !['DECODER', 'ANALYZER', 'MENTOR', 'ADMIN'].includes(decoder.role)) return false;
 
   try {
     await prisma.session.update({

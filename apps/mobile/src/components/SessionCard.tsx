@@ -24,12 +24,16 @@ function lastMessagePreview(session: SessionWithMeta): string {
 
 const STATUS_COLORS: Record<SessionStatus, string> = {
   NEW: Colors.orange,
+  ANALYZER_REVIEW: '#8B5CF6',
+  PENDING_DECODER: Colors.gold,
   IN_PROGRESS: '#FFB703',
   COMPLETED: '#06D6A0',
 };
 
 const STATUS_LABELS: Record<SessionStatus, string> = {
   NEW: 'Pending',
+  ANALYZER_REVIEW: 'Being Analyzed',
+  PENDING_DECODER: 'Pending Decoder',
   IN_PROGRESS: 'In Progress',
   COMPLETED: 'Completed',
 };

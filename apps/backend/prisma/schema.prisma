@@ -15,11 +15,15 @@ model User {
   displayName      String?
   fcmToken         String?
   rcAppUserId      String?              @unique
-  assignedMentorId String?
-  assignedMentor   Mentor?              @relation("AssignedMentor", fields: [assignedMentorId], references: [id])
-  createdAt        DateTime             @default(now())
+  assignedMentorId   String?
+  assignedMentor     Mentor?              @relation("AssignedMentor", fields: [assignedMentorId], references: [id])
+  assignedAnalyzerId String?
+  assignedAnalyzer   User?                @relation("AssignedAnalyzer", fields: [assignedAnalyzerId], references: [id])
+  assignedCustomers  User[]               @relation("AssignedAnalyzer")
+  createdAt          DateTime             @default(now())
   subscription     Subscription?
   sessions         Session[]            @relation("CustomerSessions")
+  analyzedSessions Session[]            @relation("AnalyzerSessions")
   claimedSessions  Session[]            @relation("ClaimedSessions")
   participants     SessionParticipant[]
   messages         Message[]
@@ -30,6 +34,7 @@ model User {
 enum Role {
   CUSTOMER
   DECODER
+  ANALYZER
   MENTOR
   ADMIN
 }
@@ -76,6 +81,9 @@ model Session {
   id           String               @id @default(uuid())
   customerId   String
   customer     User                 @relation("CustomerSessions", fields: [customerId], references: [id])
+  analyzerId   String?
+  analyzer     User?                @relation("AnalyzerSessions", fields: [analyzerId], references: [id])
+  analyzedAt   DateTime?
   claimedBy    String?
   claimer      User?                @relation("ClaimedSessions", fields: [claimedBy], references: [id])
   status       SessionStatus        @default(NEW)
@@ -89,10 +97,13 @@ model Session {
 
   @@index([status, priority])
   @@index([customerId])
+  @@index([analyzerId])
 }
 
 enum SessionStatus {
   NEW
+  ANALYZER_REVIEW
+  PENDING_DECODER
   IN_PROGRESS
   COMPLETED
 }

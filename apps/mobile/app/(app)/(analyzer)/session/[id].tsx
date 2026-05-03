@@ -37,42 +37,30 @@ type SessionDetail = {
   analyzer: { id: string; displayName: string | null; phone: string } | null;
   claimedBy: string | null;
   claimedAt: string | null;
-  claimer: { id: string; displayName: string | null; phone: string } | null;
 };
-type TeamMember = {
-  id: string;
-  phone: string;
-  displayName: string | null;
-  role: string;
-};
+type DecoderMember = { id: string; phone: string; displayName: string | null; role: string };
 
 const STATUS_COLOR: Record<SessionStatus, string> = {
   NEW: Colors.warning,
   ANALYZER_REVIEW: '#8B5CF6',
-  PENDING_DECODER: Colors.warning,
+  PENDING_DECODER: '#10B981',
   IN_PROGRESS: '#3B82F6',
   COMPLETED: '#10B981',
 };
 const STATUS_LABEL: Record<SessionStatus, string> = {
-  NEW: 'Unanalyzed',
-  ANALYZER_REVIEW: 'Being Analyzed',
-  PENDING_DECODER: 'Ready for Decoder',
-  IN_PROGRESS: 'In Progress',
+  NEW: 'New',
+  ANALYZER_REVIEW: 'In Review',
+  PENDING_DECODER: 'Sent to Decoder',
+  IN_PROGRESS: 'Decoder Working',
   COMPLETED: 'Complete',
 };
-
-function formatClaimedAt(iso: string) {
-  const d = new Date(iso);
-  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) +
-    ' at ' + d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
-}
 
 function maskPhone(phone: string) {
   if (phone.length <= 6) return phone;
   return phone.slice(0, 3) + ' ••••• ' + phone.slice(-4);
 }
 
-export default function DecoderSession() {
+export default function AnalyzerSession() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const { user } = useAuthStore();
@@ -83,21 +71,19 @@ export default function DecoderSession() {
   const { isRecording, recordingDurationMs, isUploading, startRecording, stopAndUpload, cancelRecording, error: recordingError } = useAudioUpload();
 
   const [session, setSession] = useState<SessionDetail | null>(null);
-  const [team, setTeam] = useState<TeamMember[]>([]);
-  const [isAssigning, setIsAssigning] = useState(false);
+  const [decoders, setDecoders] = useState<DecoderMember[]>([]);
   const [socketMessages, setSocketMessages] = useState<MessageWithSender[]>([]);
   const [typingUserId, setTypingUserId] = useState<string | null>(null);
   const [textInput, setTextInput] = useState('');
   const [isSending, setIsSending] = useState(false);
   const [isClaiming, setIsClaiming] = useState(false);
-  const [isCompleting, setIsCompleting] = useState(false);
-  const [isUnclaiming, setIsUnclaiming] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const typingTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     if (!id) return;
     api.get<SessionDetail>(`/v1/sessions/${id}`).then(setSession).catch(() => null);
-    api.get<TeamMember[]>('/v1/decoder/team').then(setTeam).catch(() => null);
+    api.get<DecoderMember[]>('/v1/analyzer/decoders').then(setDecoders).catch(() => null);
   }, [id]);
 
   useEffect(() => {
@@ -134,9 +120,9 @@ export default function DecoderSession() {
     if (isClaiming) return;
     setIsClaiming(true);
     try {
-      const updated = await api.patch<SessionDetail>(`/v1/sessions/${id}/claim`);
+      const updated = await api.patch<SessionDetail>(`/v1/sessions/${id}/analyzer-claim`);
       setSession(updated);
-      void queryClient.invalidateQueries({ queryKey: ['decoder-queue'] });
+      void queryClient.invalidateQueries({ queryKey: ['analyzer-queue'] });
     } catch (err: unknown) {
       Alert.alert('Error', (err as { message?: string }).message ?? 'Could not claim this dream.');
     } finally {
@@ -144,117 +130,56 @@ export default function DecoderSession() {
     }
   };
 
-  const handleAssign = useCallback(() => {
-    const others = team.filter((m) => m.id !== user?.id);
-    const self = team.find((m) => m.id === user?.id);
-    const options: TeamMember[] = self ? [self, ...others] : others;
-    const labels = options.map((m) =>
-      m.id === user?.id
-        ? `Claim for myself${m.displayName ? ` (${m.displayName})` : ''}`
-        : (m.displayName ?? m.phone)
-    );
+  const handleSubmitAnalysis = useCallback(() => {
+    const options = ['Send to Decoder Queue', 'Assign to Specific Decoder', 'Cancel'];
 
-    const doAssign = async (member: TeamMember) => {
-      setIsAssigning(true);
+    const doSubmit = async (decoderId?: string) => {
+      setIsSubmitting(true);
       try {
-        const endpoint = member.id === user?.id ? `/v1/sessions/${id}/claim` : `/v1/sessions/${id}/assign`;
-        const body = member.id === user?.id ? undefined : { decoderId: member.id };
-        const updated = await (body ? api.patch<SessionDetail>(endpoint, body) : api.patch<SessionDetail>(endpoint));
+        const body = decoderId ? { decoderId } : {};
+        const updated = await api.patch<SessionDetail>(`/v1/sessions/${id}/analyzer-done`, body);
         setSession(updated);
-        void queryClient.invalidateQueries({ queryKey: ['decoder-queue'] });
-        void queryClient.invalidateQueries({ queryKey: ['decoder-mine'] });
+        void queryClient.invalidateQueries({ queryKey: ['analyzer-queue'] });
+        void queryClient.invalidateQueries({ queryKey: ['analyzer-mine'] });
       } catch (err: unknown) {
-        Alert.alert('Error', (err as { message?: string }).message ?? 'Could not assign dream.');
+        Alert.alert('Error', (err as { message?: string }).message ?? 'Could not submit analysis.');
       } finally {
-        setIsAssigning(false);
+        setIsSubmitting(false);
+      }
+    };
+
+    const showDecoderPicker = () => {
+      const labels = decoders.map((d) => d.displayName ?? maskPhone(d.phone));
+
+      if (Platform.OS === 'ios') {
+        ActionSheetIOS.showActionSheetWithOptions(
+          { options: [...labels, 'Cancel'], cancelButtonIndex: labels.length, title: 'Assign to Decoder' },
+          (index) => { if (index < decoders.length) void doSubmit(decoders[index]!.id); },
+        );
+      } else {
+        Alert.alert('Assign to Decoder', undefined, [
+          ...decoders.map((d, i) => ({ text: labels[i]!, onPress: () => void doSubmit(d.id) })),
+          { text: 'Cancel', style: 'cancel' as const },
+        ]);
       }
     };
 
     if (Platform.OS === 'ios') {
       ActionSheetIOS.showActionSheetWithOptions(
-        { options: [...labels, 'Cancel'], cancelButtonIndex: labels.length, title: 'Assign Dream To' },
-        (index) => { if (index < options.length) void doAssign(options[index]!); },
+        { options, cancelButtonIndex: 2, title: 'Submit Analysis' },
+        (index) => {
+          if (index === 0) void doSubmit();
+          if (index === 1) showDecoderPicker();
+        },
       );
     } else {
-      Alert.alert('Assign Dream To', undefined, [
-        ...options.map((m, i) => ({ text: labels[i]!, onPress: () => void doAssign(m) })),
+      Alert.alert('Submit Analysis', 'Choose how to route this dream to a decoder.', [
+        { text: 'Send to Decoder Queue', onPress: () => void doSubmit() },
+        { text: 'Assign to Specific Decoder', onPress: showDecoderPicker },
         { text: 'Cancel', style: 'cancel' as const },
       ]);
     }
-  }, [team, user?.id, id, queryClient]);
-
-  const handleComplete = () => {
-    Alert.alert('Mark as Complete', 'The customer will be notified that their dream has been analysed.', [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Complete', onPress: async () => {
-          setIsCompleting(true);
-          try {
-            const updated = await api.patch<SessionDetail>(`/v1/sessions/${id}/complete`);
-            setSession(updated);
-            void queryClient.invalidateQueries({ queryKey: ['decoder-queue'] });
-            void queryClient.invalidateQueries({ queryKey: ['decoder-mine'] });
-          } catch (err: unknown) {
-            Alert.alert('Error', (err as { message?: string }).message ?? 'Could not complete session.');
-          } finally {
-            setIsCompleting(false);
-          }
-        },
-      },
-    ]);
-  };
-
-  const handleReassign = useCallback(() => {
-    const others = team.filter((m) => m.id !== user?.id);
-    const options = others;
-    const labels = options.map((m) => m.displayName ?? maskPhone(m.phone));
-
-    const doReassign = async (member: TeamMember) => {
-      try {
-        const updated = await api.patch<SessionDetail>(`/v1/sessions/${id}/reassign`, { decoderId: member.id });
-        setSession(updated);
-        void queryClient.invalidateQueries({ queryKey: ['decoder-queue'] });
-        void queryClient.invalidateQueries({ queryKey: ['decoder-mine'] });
-      } catch (err: unknown) {
-        Alert.alert('Error', (err as { message?: string }).message ?? 'Could not reassign.');
-      }
-    };
-
-    if (Platform.OS === 'ios') {
-      ActionSheetIOS.showActionSheetWithOptions(
-        { options: [...labels, 'Cancel'], cancelButtonIndex: labels.length, title: 'Reassign Dream To' },
-        (index) => { if (index < options.length) void doReassign(options[index]!); },
-      );
-    } else {
-      Alert.alert('Reassign Dream To', undefined, [
-        ...options.map((m, i) => ({ text: labels[i]!, onPress: () => void doReassign(m) })),
-        { text: 'Cancel', style: 'cancel' as const },
-      ]);
-    }
-  }, [team, user?.id, id, queryClient]);
-
-  const handleUnclaim = () => {
-    Alert.alert('Return to Pending', 'This dream will go back to the queue. Anyone can claim it.', [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Return to Pending',
-        style: 'destructive',
-        onPress: async () => {
-          setIsUnclaiming(true);
-          try {
-            const updated = await api.patch<SessionDetail>(`/v1/sessions/${id}/unclaim`);
-            setSession(updated);
-            void queryClient.invalidateQueries({ queryKey: ['decoder-queue'] });
-            void queryClient.invalidateQueries({ queryKey: ['decoder-mine'] });
-          } catch (err: unknown) {
-            Alert.alert('Error', (err as { message?: string }).message ?? 'Could not return to pending.');
-          } finally {
-            setIsUnclaiming(false);
-          }
-        },
-      },
-    ]);
-  };
+  }, [decoders, id, queryClient]);
 
   const handleSendText = async () => {
     const content = textInput.trim();
@@ -306,11 +231,8 @@ export default function DecoderSession() {
   }, [user?.id, audioPlayer]);
 
   const status = session?.status ?? 'NEW';
-  const isMyClaim = session?.claimedBy === user?.id;
+  const isMySession = session?.analyzerId === user?.id;
   const statusColor = STATUS_COLOR[status];
-  const claimerName = session?.claimer
-    ? (session.claimer.displayName ?? maskPhone(session.claimer.phone))
-    : null;
 
   return (
     <SafeAreaView style={styles.safe}>
@@ -319,15 +241,10 @@ export default function DecoderSession() {
           <Text style={styles.backText}>← Back</Text>
         </TouchableOpacity>
         <View style={styles.headingWrap}>
-          <Text style={styles.heading} numberOfLines={1}>Dream Session</Text>
+          <Text style={styles.heading} numberOfLines={1}>Dream Analysis</Text>
           <View style={[styles.statusBadge, { backgroundColor: statusColor + '22', borderColor: statusColor }]}>
             <Text style={[styles.statusText, { color: statusColor }]}>{STATUS_LABEL[status]}</Text>
           </View>
-          {session?.claimedAt && claimerName ? (
-            <Text style={styles.assignedMeta} numberOfLines={1}>
-              {isMyClaim ? 'Claimed' : `Assigned to ${claimerName}`} · {formatClaimedAt(session.claimedAt)}
-            </Text>
-          ) : null}
         </View>
         <View style={styles.placeholder} />
       </View>
@@ -345,34 +262,25 @@ export default function DecoderSession() {
           />
         )}
 
-        {(status === 'NEW' || status === 'PENDING_DECODER') && (
-          <View style={styles.claimArea}>
-            {session?.analyzer && (
-              <Text style={styles.analyzerNote}>
-                Analyzed by {session.analyzer.displayName ?? maskPhone(session.analyzer.phone)}
-              </Text>
-            )}
-            <Text style={styles.claimHint}>Claim or assign this dream to start your review</Text>
-            <View style={styles.claimRow}>
-              <TouchableOpacity
-                style={[styles.claimBtn, (isClaiming || isAssigning) && styles.btnDisabled]}
-                onPress={handleClaim}
-                disabled={isClaiming || isAssigning}
-              >
-                {isClaiming ? <ActivityIndicator color={Colors.white} size="small" /> : <Text style={styles.claimBtnText}>Claim for Myself</Text>}
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.assignBtn, (isClaiming || isAssigning) && styles.btnDisabled]}
-                onPress={handleAssign}
-                disabled={isClaiming || isAssigning}
-              >
-                {isAssigning ? <ActivityIndicator color={Colors.orange} size="small" /> : <Text style={styles.assignBtnText}>Assign to Decoder</Text>}
-              </TouchableOpacity>
-            </View>
+        {/* NEW: claim to start analysis */}
+        {status === 'NEW' && (
+          <View style={styles.actionArea}>
+            <Text style={styles.actionHint}>Claim this dream to begin your analysis</Text>
+            <TouchableOpacity
+              style={[styles.claimBtn, isClaiming && styles.btnDisabled]}
+              onPress={handleClaim}
+              disabled={isClaiming}
+            >
+              {isClaiming
+                ? <ActivityIndicator color={Colors.white} size="small" />
+                : <Text style={styles.claimBtnText}>Claim for Analysis</Text>
+              }
+            </TouchableOpacity>
           </View>
         )}
 
-        {status === 'IN_PROGRESS' && isMyClaim && (
+        {/* ANALYZER_REVIEW: my session — send notes + submit */}
+        {status === 'ANALYZER_REVIEW' && isMySession && (
           <View style={styles.inputArea}>
             {recordingError ? <Text style={styles.errorText}>{recordingError}</Text> : null}
             {isRecording ? (
@@ -381,8 +289,14 @@ export default function DecoderSession() {
               <View style={styles.textRow}>
                 <HoldToRecord isRecording={false} isDisabled={isUploading || isSending} compact onHoldStart={handleHoldStart} onHoldEnd={handleHoldEnd} onCancel={() => cancelRecording()} durationMs={0} />
                 <TextInput
-                  style={styles.input} placeholder="Type your analysis…" placeholderTextColor={Colors.gray4}
-                  value={textInput} onChangeText={handleTextChange} multiline maxLength={4000} editable={!isSending && !isUploading}
+                  style={styles.input}
+                  placeholder="Type your analysis notes for the decoder…"
+                  placeholderTextColor={Colors.gray4}
+                  value={textInput}
+                  onChangeText={handleTextChange}
+                  multiline
+                  maxLength={4000}
+                  editable={!isSending && !isUploading}
                 />
                 {textInput.trim().length > 0 && (
                   <TouchableOpacity style={styles.sendBtn} onPress={handleSendText} disabled={isSending}>
@@ -391,40 +305,35 @@ export default function DecoderSession() {
                 )}
               </View>
             )}
-            <TouchableOpacity style={[styles.completeBtn, isCompleting && styles.btnDisabled]} onPress={handleComplete} disabled={isCompleting}>
-              {isCompleting ? <ActivityIndicator color={Colors.white} size="small" /> : <Text style={styles.completeBtnText}>✓ Mark Complete</Text>}
+            <TouchableOpacity
+              style={[styles.submitBtn, isSubmitting && styles.btnDisabled]}
+              onPress={handleSubmitAnalysis}
+              disabled={isSubmitting}
+            >
+              {isSubmitting
+                ? <ActivityIndicator color={Colors.white} size="small" />
+                : <Text style={styles.submitBtnText}>✓ Submit Analysis & Route to Decoder</Text>
+              }
             </TouchableOpacity>
-            <View style={styles.mgmtRow}>
-              <TouchableOpacity style={styles.mgmtBtn} onPress={handleReassign}>
-                <Text style={styles.mgmtBtnText}>⇄ Reassign</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={[styles.mgmtBtn, styles.mgmtBtnDanger]} onPress={handleUnclaim} disabled={isUnclaiming}>
-                {isUnclaiming ? <ActivityIndicator color={Colors.error} size="small" /> : <Text style={[styles.mgmtBtnText, { color: Colors.error }]}>↩ Back to Pending</Text>}
-              </TouchableOpacity>
-            </View>
           </View>
         )}
 
-        {status === 'IN_PROGRESS' && !isMyClaim && (
+        {/* ANALYZER_REVIEW: someone else's session */}
+        {status === 'ANALYZER_REVIEW' && !isMySession && (
           <View style={styles.bannerArea}>
             <Text style={styles.bannerText}>
-              Claimed by {claimerName ?? 'another decoder'}
+              Under review by {session?.analyzer?.displayName ?? 'another analyzer'}
             </Text>
-            {(user?.role === 'ADMIN' || user?.role === 'MENTOR') && (
-              <View style={styles.mgmtRow}>
-                <TouchableOpacity style={styles.mgmtBtn} onPress={handleReassign}>
-                  <Text style={styles.mgmtBtnText}>⇄ Reassign</Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={[styles.mgmtBtn, styles.mgmtBtnDanger]} onPress={handleUnclaim} disabled={isUnclaiming}>
-                  {isUnclaiming ? <ActivityIndicator color={Colors.error} size="small" /> : <Text style={[styles.mgmtBtnText, { color: Colors.error }]}>↩ Back to Pending</Text>}
-                </TouchableOpacity>
-              </View>
-            )}
           </View>
         )}
 
-        {status === 'COMPLETED' && (
-          <View style={styles.bannerArea}><Text style={[styles.bannerText, { color: '#10B981' }]}>✓ Session completed</Text></View>
+        {/* PENDING_DECODER / IN_PROGRESS / COMPLETED */}
+        {(status === 'PENDING_DECODER' || status === 'IN_PROGRESS' || status === 'COMPLETED') && (
+          <View style={styles.bannerArea}>
+            <Text style={[styles.bannerText, status === 'COMPLETED' && { color: '#10B981' }]}>
+              {status === 'PENDING_DECODER' ? '⏳ Waiting for a decoder to pick up' : status === 'IN_PROGRESS' ? '🔍 Decoder is working on this' : '✓ Session completed'}
+            </Text>
+          </View>
         )}
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -436,37 +345,39 @@ const styles = StyleSheet.create({
   flex: { flex: 1 },
   topBar: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: Colors.navyCard },
   backBtn: { paddingVertical: 4, paddingRight: 8 },
-  backText: { color: Colors.orange, fontSize: 15, fontFamily: 'Inter_500Medium' },
+  backText: { color: '#8B5CF6', fontSize: 15, fontFamily: 'Inter_500Medium' },
   headingWrap: { alignItems: 'center', gap: 4, flex: 1 },
   heading: { color: Colors.white, fontSize: 15, fontFamily: 'Poppins_600SemiBold' },
   statusBadge: { borderRadius: 6, borderWidth: 1, paddingHorizontal: 8, paddingVertical: 2 },
   statusText: { fontSize: 10, fontFamily: 'Inter_600SemiBold' },
-  assignedMeta: { color: Colors.gray4, fontSize: 10, fontFamily: 'Inter_400Regular', textAlign: 'center' },
   placeholder: { width: 60 },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   messageList: { paddingHorizontal: 16, paddingVertical: 12, gap: 2 },
   pageLoader: { paddingVertical: 12, alignItems: 'center' },
-  claimArea: { padding: 20, gap: 8, borderTopWidth: 1, borderTopColor: Colors.navyCard, alignItems: 'center' },
-  analyzerNote: { color: '#C4B5FD', fontSize: 12, fontFamily: 'Inter_500Medium', textAlign: 'center' },
-  claimHint: { color: Colors.gray3, fontSize: 13, fontFamily: 'Inter_400Regular', textAlign: 'center' },
-  claimRow: { flexDirection: 'row', gap: 10, width: '100%' },
-  claimBtn: { flex: 1, backgroundColor: Colors.orange, borderRadius: 12, paddingVertical: 14, alignItems: 'center', shadowColor: Colors.orange, shadowOpacity: 0.3, shadowRadius: 8, shadowOffset: { width: 0, height: 2 }, elevation: 4 },
+  actionArea: { padding: 20, gap: 12, borderTopWidth: 1, borderTopColor: Colors.navyCard, alignItems: 'center' },
+  actionHint: { color: Colors.gray3, fontSize: 13, fontFamily: 'Inter_400Regular', textAlign: 'center' },
+  claimBtn: {
+    backgroundColor: '#8B5CF6',
+    borderRadius: 12,
+    paddingVertical: 14,
+    alignItems: 'center',
+    width: '100%',
+    shadowColor: '#8B5CF6',
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 4,
+  },
   claimBtnText: { color: Colors.white, fontSize: 15, fontFamily: 'Poppins_600SemiBold' },
-  assignBtn: { flex: 1, borderRadius: 12, paddingVertical: 14, alignItems: 'center', borderWidth: 1.5, borderColor: Colors.orange },
-  assignBtnText: { color: Colors.orange, fontSize: 15, fontFamily: 'Inter_600SemiBold' },
   btnDisabled: { opacity: 0.5 },
   inputArea: { borderTopWidth: 1, borderTopColor: Colors.navyCard, paddingHorizontal: 12, paddingTop: 10, paddingBottom: 8, backgroundColor: Colors.navy, gap: 8 },
   textRow: { flexDirection: 'row', alignItems: 'flex-end', gap: 8 },
   input: { flex: 1, backgroundColor: Colors.navyCard, borderRadius: 20, paddingHorizontal: 14, paddingVertical: 10, color: Colors.white, fontSize: 15, fontFamily: 'Inter_400Regular', maxHeight: 100 },
-  sendBtn: { width: 38, height: 38, borderRadius: 19, backgroundColor: Colors.orange, justifyContent: 'center', alignItems: 'center' },
+  sendBtn: { width: 38, height: 38, borderRadius: 19, backgroundColor: '#8B5CF6', justifyContent: 'center', alignItems: 'center' },
   sendIcon: { color: Colors.white, fontSize: 16 },
-  completeBtn: { backgroundColor: '#10B981', borderRadius: 10, paddingVertical: 10, alignItems: 'center' },
-  completeBtnText: { color: Colors.white, fontSize: 14, fontFamily: 'Inter_600SemiBold' },
+  submitBtn: { backgroundColor: '#8B5CF6', borderRadius: 10, paddingVertical: 12, alignItems: 'center' },
+  submitBtnText: { color: Colors.white, fontSize: 14, fontFamily: 'Inter_600SemiBold' },
   errorText: { color: Colors.error, fontSize: 12, fontFamily: 'Inter_400Regular' },
-  bannerArea: { padding: 16, borderTopWidth: 1, borderTopColor: Colors.navyCard, alignItems: 'center', gap: 12 },
-  bannerText: { color: Colors.gray4, fontSize: 13, fontFamily: 'Inter_500Medium' },
-  mgmtRow: { flexDirection: 'row', gap: 8, width: '100%' },
-  mgmtBtn: { flex: 1, borderRadius: 8, paddingVertical: 8, alignItems: 'center', borderWidth: 1, borderColor: Colors.gold + '44' },
-  mgmtBtnDanger: { borderColor: Colors.error + '44' },
-  mgmtBtnText: { color: Colors.orange, fontSize: 12, fontFamily: 'Inter_600SemiBold' },
+  bannerArea: { padding: 16, borderTopWidth: 1, borderTopColor: Colors.navyCard, alignItems: 'center' },
+  bannerText: { color: Colors.gray4, fontSize: 13, fontFamily: 'Inter_500Medium', textAlign: 'center' },
 });

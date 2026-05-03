@@ -74,6 +74,7 @@ export const sessionRoutes: FastifyPluginAsync = async (fastify) => {
       include: {
         participants: true,
         _count: { select: { messages: true } },
+        analyzer: { select: { id: true, displayName: true, phone: true } },
         claimer: { select: { id: true, displayName: true, phone: true } },
       },
     });
@@ -81,13 +82,104 @@ export const sessionRoutes: FastifyPluginAsync = async (fastify) => {
     return reply.send(session);
   });
 
-  // PATCH /sessions/:id/claim
+  // PATCH /sessions/:id/analyzer-claim — analyzer claims a NEW session
+  fastify.patch('/:id/analyzer-claim', async (request, reply) => {
+    const { id } = z.object({ id: z.string().uuid() }).parse(request.params);
+    const analyzerId = request.user.sub;
+    const callerRole = request.user.role;
+
+    if (!['ANALYZER', 'MENTOR', 'ADMIN'].includes(callerRole)) {
+      return reply.status(403).send({ error: 'Forbidden' });
+    }
+
+    const session = await prisma.session.update({
+      where: { id, status: 'NEW' },
+      data: {
+        analyzerId,
+        status: 'ANALYZER_REVIEW',
+        participants: {
+          upsert: {
+            where: { sessionId_userId: { sessionId: id, userId: analyzerId } },
+            create: { userId: analyzerId, roleInSession: 'ANALYZER' },
+            update: {},
+          },
+        },
+      },
+      include: {
+        analyzer: { select: { id: true, displayName: true, phone: true } },
+        claimer: { select: { id: true, displayName: true, phone: true } },
+      },
+    });
+
+    fastify.io.to(id).emit('session:status', { session_id: id, status: 'ANALYZER_REVIEW', claimed_by: null });
+    return reply.send(session);
+  });
+
+  // PATCH /sessions/:id/analyzer-done — analyzer submits analysis, routes to decoder
+  fastify.patch('/:id/analyzer-done', async (request, reply) => {
+    const { id } = z.object({ id: z.string().uuid() }).parse(request.params);
+    const callerId = request.user.sub;
+    const callerRole = request.user.role;
+
+    if (!['ANALYZER', 'MENTOR', 'ADMIN'].includes(callerRole)) {
+      return reply.status(403).send({ error: 'Forbidden' });
+    }
+
+    const existing = await prisma.session.findUnique({ where: { id }, select: { analyzerId: true, status: true } });
+    if (!existing || existing.status !== 'ANALYZER_REVIEW') {
+      return reply.status(400).send({ error: 'Session is not under analyzer review' });
+    }
+    if (existing.analyzerId !== callerId && !['MENTOR', 'ADMIN'].includes(callerRole)) {
+      return reply.status(403).send({ error: 'Only the assigned analyzer can submit' });
+    }
+
+    const { decoderId } = z.object({ decoderId: z.string().uuid().optional() }).parse(request.body ?? {});
+
+    let updateData: Record<string, unknown> = { analyzedAt: new Date() };
+
+    if (decoderId) {
+      const target = await prisma.user.findUnique({ where: { id: decoderId }, select: { role: true } });
+      if (!target || !['DECODER', 'MENTOR', 'ADMIN'].includes(target.role)) {
+        return reply.status(400).send({ error: 'Target user is not a decoder' });
+      }
+      updateData = {
+        ...updateData,
+        status: 'IN_PROGRESS',
+        claimedBy: decoderId,
+        claimedAt: new Date(),
+        participants: {
+          upsert: {
+            where: { sessionId_userId: { sessionId: id, userId: decoderId } },
+            create: { userId: decoderId, roleInSession: 'DECODER' },
+            update: {},
+          },
+        },
+      };
+    } else {
+      updateData = { ...updateData, status: 'PENDING_DECODER' };
+    }
+
+    const session = await prisma.session.update({
+      where: { id },
+      data: updateData as never,
+      include: {
+        analyzer: { select: { id: true, displayName: true, phone: true } },
+        claimer: { select: { id: true, displayName: true, phone: true } },
+      },
+    });
+
+    const newStatus = decoderId ? 'IN_PROGRESS' : 'PENDING_DECODER';
+    fastify.io.to(id).emit('session:status', { session_id: id, status: newStatus, claimed_by: decoderId ?? null });
+    return reply.send(session);
+  });
+
+  // PATCH /sessions/:id/claim — decoder claims a PENDING_DECODER (or legacy NEW) session
   fastify.patch('/:id/claim', async (request, reply) => {
     const { id } = z.object({ id: z.string().uuid() }).parse(request.params);
     const decoderId = request.user.sub;
 
     const session = await prisma.session.update({
-      where: { id, status: 'NEW' },
+      where: { id, status: { in: ['NEW', 'PENDING_DECODER'] } },
       data: {
         claimedBy: decoderId,
         status: 'IN_PROGRESS',
@@ -113,7 +205,7 @@ export const sessionRoutes: FastifyPluginAsync = async (fastify) => {
     const { decoderId } = z.object({ decoderId: z.string().uuid() }).parse(request.body);
     const callerRole = request.user.role;
 
-    if (!['DECODER', 'MENTOR', 'ADMIN'].includes(callerRole)) {
+    if (!['DECODER', 'ANALYZER', 'MENTOR', 'ADMIN'].includes(callerRole)) {
       return reply.status(403).send({ error: 'Forbidden' });
     }
 
@@ -126,7 +218,7 @@ export const sessionRoutes: FastifyPluginAsync = async (fastify) => {
     }
 
     const session = await prisma.session.update({
-      where: { id, status: 'NEW' },
+      where: { id, status: { in: ['NEW', 'PENDING_DECODER'] } },
       data: {
         claimedBy: decoderId,
         status: 'IN_PROGRESS',

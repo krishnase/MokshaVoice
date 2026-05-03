@@ -1,10 +1,10 @@
 // ─── Enums ────────────────────────────────────────────────────────────────────
 
-export type Role = 'CUSTOMER' | 'DECODER' | 'MENTOR' | 'ADMIN';
+export type Role = 'CUSTOMER' | 'DECODER' | 'ANALYZER' | 'MENTOR' | 'ADMIN';
 export type Plan = 'FREE' | 'SILVER' | 'GOLD' | 'PLATINUM';
 export type Provider = 'APPLE' | 'GOOGLE' | 'STRIPE';
 export type SubStatus = 'ACTIVE' | 'CANCELLED' | 'EXPIRED' | 'BILLING_ISSUE';
-export type SessionStatus = 'NEW' | 'IN_PROGRESS' | 'COMPLETED';
+export type SessionStatus = 'NEW' | 'ANALYZER_REVIEW' | 'PENDING_DECODER' | 'IN_PROGRESS' | 'COMPLETED';
 export type MessageType = 'VOICE' | 'TEXT' | 'SYSTEM';
 export type ConsultationStatus = 'PENDING' | 'SCHEDULED' | 'COMPLETED' | 'CANCELLED';
 
@@ -99,6 +99,8 @@ export interface QuotaResult {
 export interface Session {
   id: string;
   customerId: string;
+  analyzerId: string | null;
+  analyzedAt: string | null;
   claimedBy: string | null;
   status: SessionStatus;
   priority: 1 | 2 | 3;
