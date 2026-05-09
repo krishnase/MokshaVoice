@@ -9,8 +9,6 @@ import {
   ActivityIndicator,
   Alert,
   Modal,
-  ActionSheetIOS,
-  Platform,
   StyleSheet,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
@@ -73,6 +71,7 @@ export default function AdminUsers() {
   const [roleFilter, setRoleFilter] = useState<Role | undefined>(params.role as Role | undefined);
   const [search, setSearch] = useState('');
   const [updatingId, setUpdatingId] = useState<string | null>(null);
+  const [rolePickerUser, setRolePickerUser] = useState<AdminUser | null>(null);
   const [mentorPickerUser, setMentorPickerUser] = useState<AdminUser | null>(null);
   const [analyzerPickerUser, setAnalyzerPickerUser] = useState<AdminUser | null>(null);
 
@@ -103,27 +102,8 @@ export default function AdminUsers() {
   const allMentors = useMemo(() => mentorsQuery.data?.mentors ?? [], [mentorsQuery.data]);
   const allAnalyzers = useMemo(() => analyzersQuery.data?.data ?? [], [analyzersQuery.data]);
 
-  const changeRole = useCallback(async (user: AdminUser) => {
-    const options = ROLES.filter((r) => r !== user.role);
-
-    if (Platform.OS === 'ios') {
-      ActionSheetIOS.showActionSheetWithOptions(
-        { options: [...options, 'Cancel'], cancelButtonIndex: options.length, title: `Change role for ${maskPhone(user.phone)}` },
-        async (index) => {
-          if (index >= options.length) return;
-          await applyRoleChange(user.id, options[index]!);
-        },
-      );
-    } else {
-      Alert.alert(
-        `Change role for ${maskPhone(user.phone)}`,
-        `Current: ${user.role}`,
-        [
-          ...options.map((r) => ({ text: r, onPress: () => applyRoleChange(user.id, r) })),
-          { text: 'Cancel', style: 'cancel' as const },
-        ],
-      );
-    }
+  const changeRole = useCallback((user: AdminUser) => {
+    setRolePickerUser(user);
   }, []);
 
   const applyRoleChange = async (userId: string, role: Role) => {
@@ -311,6 +291,42 @@ export default function AdminUsers() {
           ListEmptyComponent={<View style={styles.empty}><Text style={styles.emptyText}>No users found</Text></View>}
         />
       )}
+
+      {/* Role picker modal */}
+      <Modal visible={!!rolePickerUser} animationType="slide" transparent onRequestClose={() => setRolePickerUser(null)}>
+        <View style={styles.pickerOverlay}>
+          <View style={styles.pickerSheet}>
+            <View style={styles.pickerHeader}>
+              <Text style={styles.pickerTitle}>Change Role</Text>
+              <TouchableOpacity onPress={() => setRolePickerUser(null)} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+                <Text style={styles.pickerClose}>✕</Text>
+              </TouchableOpacity>
+            </View>
+            {rolePickerUser && (
+              <Text style={styles.pickerSub}>
+                {rolePickerUser.fullName ?? rolePickerUser.displayName ?? maskPhone(rolePickerUser.phone)}
+                {' · current: '}{rolePickerUser.role}
+              </Text>
+            )}
+            {ROLES.filter((r) => r !== rolePickerUser?.role).map((r) => (
+              <TouchableOpacity
+                key={r}
+                style={styles.pickerOption}
+                onPress={async () => {
+                  const uid = rolePickerUser!.id;
+                  setRolePickerUser(null);
+                  await applyRoleChange(uid, r);
+                }}
+              >
+                <Text style={[styles.pickerOptionText, { color: ROLE_COLOR[r] }]}>{r}</Text>
+              </TouchableOpacity>
+            ))}
+            <TouchableOpacity style={styles.pickerCancel} onPress={() => setRolePickerUser(null)}>
+              <Text style={styles.pickerCancelText}>Cancel</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
 
       {/* Mentor picker modal */}
       <Modal visible={!!mentorPickerUser} animationType="slide" transparent onRequestClose={() => setMentorPickerUser(null)}>

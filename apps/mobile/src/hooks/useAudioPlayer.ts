@@ -62,6 +62,16 @@ async function resolveLocalUri(messageId: string, playbackUrl: string): Promise<
 let _activeSound: Sound | null = null;
 let _activeMessageId: string | null = null;
 
+/** Stop and unload any active playback. Call this before starting a recording. */
+export async function stopActiveAudio(): Promise<void> {
+  if (_activeSound) {
+    try { await _activeSound.stopAsync(); } catch {}
+    try { await _activeSound.unloadAsync(); } catch {}
+    _activeSound = null;
+    _activeMessageId = null;
+  }
+}
+
 export function useAudioPlayer(): UseAudioPlayerReturn {
   const soundRef = useRef<Sound | null>(null);
   const [state, setState] = useState<PlaybackState>({

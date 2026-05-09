@@ -28,7 +28,7 @@ type Stats = {
   totalAnalyzers: number;
 };
 
-type Customer = { id: string; phone: string };
+type Customer = { id: string; phone: string; fullName: string | null; displayName: string | null };
 type PendingSession = {
   id: string;
   status: string;
@@ -41,6 +41,8 @@ type PendingResponse = { data: PendingSession[] };
 type AdminUser = {
   id: string;
   phone: string;
+  fullName: string | null;
+  displayName: string | null;
   role: string;
   createdAt: string;
   subscription: { plan: string; status: string } | null;
@@ -62,13 +64,18 @@ function timeAgo(iso: string) {
   return `${Math.floor(hrs / 24)}d ago`;
 }
 
-function StatCard({ label, value, sub, color }: { label: string; value: number | string; sub?: string; color: string }) {
+function StatCard({ label, value, sub, color, onPress }: { label: string; value: number | string; sub?: string; color: string; onPress?: () => void }) {
   return (
-    <View style={[styles.statCard, { borderTopColor: color }]}>
+    <TouchableOpacity
+      style={[styles.statCard, { borderTopColor: color }, onPress && styles.statCardTappable]}
+      onPress={onPress}
+      activeOpacity={onPress ? 0.7 : 1}
+    >
       <Text style={[styles.statValue, { color }]}>{value}</Text>
       <Text style={styles.statLabel}>{label}</Text>
       {sub ? <Text style={styles.statSub}>{sub}</Text> : null}
-    </View>
+      {onPress ? <Text style={[styles.statArrow, { color }]}>›</Text> : null}
+    </TouchableOpacity>
   );
 }
 
@@ -148,14 +155,14 @@ export default function AdminDashboard() {
           <>
             <Text style={styles.sectionTitle}>Overview</Text>
             <View style={styles.statsGrid}>
-              <StatCard label="Total Users" value={stats.totalUsers} sub={`+${stats.usersToday} today`} color={Colors.orange} />
-              <StatCard label="Dreams Submitted" value={stats.totalDreams} sub={`+${stats.dreamsToday} today`} color="#3B82F6" />
-              <StatCard label="Needs Analyzer" value={stats.pendingDreams} color={Colors.warning} />
-              <StatCard label="Being Analyzed" value={stats.analyzerReviewDreams} color="#8B5CF6" />
-              <StatCard label="Pending Decoder" value={stats.pendingDecoderDreams} color={Colors.gold} />
-              <StatCard label="In Progress" value={stats.inProgressDreams} color="#3B82F6" />
-              <StatCard label="Completed" value={stats.completedDreams} color="#10B981" />
-              <StatCard label="Decoders" value={stats.totalDecoders} color={Colors.pink} />
+              <StatCard label="Total Users" value={stats.totalUsers} sub={`+${stats.usersToday} today`} color={Colors.orange} onPress={() => router.push('/(app)/(admin)/users' as never)} />
+              <StatCard label="Dreams Submitted" value={stats.totalDreams} sub={`+${stats.dreamsToday} today`} color="#3B82F6" onPress={() => router.push('/(app)/(admin)/dreams' as never)} />
+              <StatCard label="Needs Analyzer" value={stats.pendingDreams} color={Colors.warning} onPress={() => router.push('/(app)/(admin)/dreams?status=NEW' as never)} />
+              <StatCard label="Being Analyzed" value={stats.analyzerReviewDreams} color="#8B5CF6" onPress={() => router.push('/(app)/(admin)/dreams?status=ANALYZER_REVIEW' as never)} />
+              <StatCard label="Pending Decoder" value={stats.pendingDecoderDreams} color={Colors.gold} onPress={() => router.push('/(app)/(admin)/dreams?status=PENDING_DECODER' as never)} />
+              <StatCard label="In Progress" value={stats.inProgressDreams} color="#3B82F6" onPress={() => router.push('/(app)/(admin)/dreams?status=IN_PROGRESS' as never)} />
+              <StatCard label="Completed" value={stats.completedDreams} color="#10B981" onPress={() => router.push('/(app)/(admin)/dreams?status=COMPLETED' as never)} />
+              <StatCard label="Decoders" value={stats.totalDecoders} color={Colors.pink} onPress={() => router.push('/(app)/(admin)/users?role=DECODER' as never)} />
             </View>
           </>
         ) : null}
@@ -182,7 +189,10 @@ export default function AdminDashboard() {
               activeOpacity={0.75}
             >
               <View style={{ flex: 1 }}>
-                <Text style={styles.rowPhone}>{maskPhone(s.customer.phone)}</Text>
+                <Text style={styles.rowPhone}>{s.customer.fullName ?? s.customer.displayName ?? maskPhone(s.customer.phone)}</Text>
+                {(s.customer.fullName || s.customer.displayName) && (
+                  <Text style={styles.rowSubPhone}>{maskPhone(s.customer.phone)}</Text>
+                )}
                 <Text style={styles.rowSub}>Waiting {timeAgo(s.createdAt)}</Text>
               </View>
               {s.priority === 1 && (
@@ -206,7 +216,10 @@ export default function AdminDashboard() {
           (recentUsersQuery.data?.data ?? []).map((u) => (
             <View key={u.id} style={styles.listRow}>
               <View style={{ flex: 1 }}>
-                <Text style={styles.rowPhone}>{maskPhone(u.phone)}</Text>
+                <Text style={styles.rowPhone}>{u.fullName ?? u.displayName ?? maskPhone(u.phone)}</Text>
+                {(u.fullName || u.displayName) && (
+                  <Text style={styles.rowSubPhone}>{maskPhone(u.phone)}</Text>
+                )}
                 <Text style={styles.rowSub}>Joined {timeAgo(u.createdAt)}</Text>
               </View>
               <View style={[styles.roleBadge, u.role !== 'CUSTOMER' && styles.roleBadgeSpecial]}>
@@ -273,9 +286,11 @@ const styles = StyleSheet.create({
     borderTopWidth: 3,
     gap: 2,
   },
+  statCardTappable: { borderWidth: 1, borderColor: Colors.gold + '22' },
   statValue: { fontSize: 28, fontFamily: 'Poppins_700Bold' },
   statLabel: { color: Colors.gray3, fontSize: 12, fontFamily: 'Inter_400Regular' },
   statSub: { color: Colors.gray4, fontSize: 11, fontFamily: 'Inter_400Regular' },
+  statArrow: { fontSize: 18, fontFamily: 'Inter_600SemiBold', marginTop: 2 },
 
   listRow: {
     flexDirection: 'row',
@@ -290,6 +305,7 @@ const styles = StyleSheet.create({
     borderColor: Colors.gold + '18',
   },
   rowPhone: { color: Colors.white, fontSize: 14, fontFamily: 'Inter_500Medium' },
+  rowSubPhone: { color: Colors.gray4, fontSize: 11, fontFamily: 'Inter_400Regular', marginTop: 1 },
   rowSub: { color: Colors.gray4, fontSize: 12, fontFamily: 'Inter_400Regular', marginTop: 2 },
   rowChevron: { color: Colors.gray4, fontSize: 20 },
   emptyRow: { paddingVertical: 14, alignItems: 'center' },

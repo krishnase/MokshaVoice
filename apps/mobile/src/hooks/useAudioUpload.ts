@@ -2,6 +2,7 @@ import { useState, useRef, useCallback } from 'react';
 import { Audio } from 'expo-av';
 import type { Recording } from 'expo-av/build/Audio/Recording';
 import { api } from '../lib/api';
+import { stopActiveAudio } from './useAudioPlayer';
 
 export interface AudioUploadResult {
   messageId: string;
@@ -54,9 +55,6 @@ export function useAudioUpload(): UseAudioUploadReturn {
   const [error, setError] = useState<string | null>(null);
 
   const startRecording = useCallback(async () => {
-    // Sync guard: if a recording object exists it hasn't been fully unloaded yet.
-    // Starting a second prepare call would throw "only one recording object can be
-    // prepared at a given time" — bail out silently and let the in-flight stop finish.
     if (recordingRef.current) return;
     setError(null);
     try {
@@ -65,6 +63,9 @@ export function useAudioUpload(): UseAudioUploadReturn {
         setError('Microphone permission denied');
         return;
       }
+
+      // Stop any active playback before claiming the audio session for recording
+      await stopActiveAudio();
 
       await Audio.setAudioModeAsync({
         allowsRecordingIOS: true,

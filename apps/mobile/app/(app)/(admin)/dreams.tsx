@@ -8,14 +8,14 @@ import {
   ActivityIndicator,
   StyleSheet,
 } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useInfiniteQuery } from '@tanstack/react-query';
 import { api } from '@/src/lib/api';
 import { Colors } from '@/src/theme';
 
 type SessionStatus = 'NEW' | 'ANALYZER_REVIEW' | 'PENDING_DECODER' | 'IN_PROGRESS' | 'COMPLETED';
-type Customer = { id: string; phone: string };
+type Customer = { id: string; phone: string; fullName: string | null; displayName: string | null };
 type Claimer = { id: string; phone: string; displayName: string | null } | null;
 type Analyzer = { id: string; phone: string; displayName: string | null } | null;
 type AdminSession = {
@@ -79,7 +79,10 @@ function sessionRoute(status: SessionStatus, id: string) {
 
 export default function AdminDreams() {
   const router = useRouter();
-  const [filter, setFilter] = useState<SessionStatus | undefined>(undefined);
+  const params = useLocalSearchParams<{ status?: string }>();
+  const [filter, setFilter] = useState<SessionStatus | undefined>(
+    params.status as SessionStatus | undefined
+  );
 
   const query = useInfiniteQuery({
     queryKey: ['admin-dreams', filter],
@@ -111,7 +114,10 @@ export default function AdminDreams() {
         </View>
         <View style={styles.cardRow}>
           <Text style={styles.label}>Customer</Text>
-          <Text style={styles.value}>{maskPhone(item.customer.phone)}</Text>
+          <Text style={styles.value}>
+            {item.customer.fullName ?? item.customer.displayName ?? maskPhone(item.customer.phone)}
+            {(item.customer.fullName || item.customer.displayName) ? ` · ${maskPhone(item.customer.phone)}` : ''}
+          </Text>
         </View>
         {item.analyzer && (
           <View style={styles.cardRow}>
