@@ -17,6 +17,7 @@
       "bundleIdentifier": "com.mokshavoice.app",
       "googleServicesFile": "./GoogleService-Info.plist",
       "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false,
         "NSMicrophoneUsageDescription": "MokshaVoice needs microphone access to record your dream descriptions.",
         "UIBackgroundModes": [
           "audio",
