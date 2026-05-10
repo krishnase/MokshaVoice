@@ -13,7 +13,9 @@
     "lint": "pnpm -r lint",
     "test": "pnpm -r test",
     "migrate": "make migrate",
-    "studio": "make studio"
+    "studio": "make studio",
+    "android": "expo run:android",
+    "ios": "expo run:ios"
   },
   "devDependencies": {
     "typescript": "^5.4.5",
