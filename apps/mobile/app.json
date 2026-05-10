@@ -15,8 +15,9 @@
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "com.mokshavoice.app",
-      "googleServicesFile": "./ios/MokshaVoice/GoogleService-Info.plist",
+      "googleServicesFile": "./GoogleService-Info.plist",
       "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false,
         "NSMicrophoneUsageDescription": "MokshaVoice needs microphone access to record your dream descriptions.",
         "UIBackgroundModes": [
           "audio",
@@ -54,7 +55,8 @@
         "expo-build-properties",
         {
           "ios": {
-            "deploymentTarget": "16.0"
+            "deploymentTarget": "16.0",
+            "useFrameworks": "static"
           },
           "android": {
             "usesCleartextTraffic": true

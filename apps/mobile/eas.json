@@ -9,6 +9,9 @@
       "android": {
         "buildType": "apk"
       },
+      "ios": {
+        "simulator": false
+      },
       "env": {
         "EXPO_PUBLIC_API_URL": "https://backend-production-5ea1e.up.railway.app",
         "EXPO_PUBLIC_RC_IOS_KEY": "test_xTxZlZRcetczxnlWvyqYtwdJpau",
@@ -22,6 +25,9 @@
     "production": {
       "android": {
         "buildType": "app-bundle"
+      },
+      "ios": {
+        "buildConfiguration": "Release"
       },
       "env": {
         "EXPO_PUBLIC_API_URL": "https://backend-production-5ea1e.up.railway.app",
@@ -38,6 +44,10 @@
     "production": {
       "android": {
         "track": "internal"
+      },
+      "ios": {
+        "appleId": "krish.sett@gmail.com",
+        "ascAppId": "6764218561"
       }
     }
   }
