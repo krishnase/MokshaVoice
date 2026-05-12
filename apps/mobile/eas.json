@@ -10,7 +10,8 @@
         "buildType": "apk"
       },
       "ios": {
-        "simulator": false
+        "simulator": true,
+        "image": "macos-sequoia-15.6-xcode-26.2"
       },
       "env": {
         "EXPO_PUBLIC_API_URL": "https://backend-production-5ea1e.up.railway.app",
