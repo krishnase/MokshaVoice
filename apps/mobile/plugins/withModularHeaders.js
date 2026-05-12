@@ -2,26 +2,9 @@ const { withDangerousMod } = require('expo/config-plugins');
 const fs = require('fs');
 const path = require('path');
 
-// react-native-firebase v24 + Firebase SDK 12 without use_frameworks!:
-// Certain Firebase pods need explicit :modular_headers => true so Xcode can
-// find their generated ObjC-Swift bridging headers (e.g. FirebaseAuth-Swift.h).
-// $RNFirebaseAsStaticFramework tells RNFBApp to build as a static framework.
-const MODULAR_PODS = [
-  'Firebase',
-  'FirebaseAuth',
-  'FirebaseCore',
-  'FirebaseCoreExtension',
-  'FirebaseCoreInternal',
-  'FirebaseInstallations',
-  'FirebaseSessions',
-  'FirebaseAuthInterop',
-  'FirebaseAppCheckInterop',
-  'GoogleUtilities',
-  'GoogleDataTransport',
-  'RecaptchaInterop',
-  'nanopb',
-];
-
+// use_frameworks! :linkage => :static requires $RNFirebaseAsStaticFramework = true
+// so react-native-firebase knows to initialize Firebase via +load rather than the
+// default ObjC category mechanism.
 module.exports = function withModularHeaders(config) {
   return withDangerousMod(config, [
     'ios',
@@ -33,13 +16,9 @@ module.exports = function withModularHeaders(config) {
         return config;
       }
 
-      const podDeclarations = MODULAR_PODS.map(
-        (pod) => `  pod '${pod}', :modular_headers => true`,
-      ).join('\n');
-
       contents = contents.replace(
         /^(target ['"]MokshaVoice['"] do)/m,
-        `$RNFirebaseAsStaticFramework = true\n\n$1\n${podDeclarations}`,
+        `$RNFirebaseAsStaticFramework = true\n\n$1`,
       );
 
       fs.writeFileSync(podfilePath, contents);

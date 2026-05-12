@@ -55,14 +55,16 @@
         "expo-build-properties",
         {
           "ios": {
-            "deploymentTarget": "16.0"
+            "deploymentTarget": "16.0",
+            "useFrameworks": "static"
           },
           "android": {
             "usesCleartextTraffic": true
           }
         }
       ],
-      "./plugins/withModularHeaders"
+      "./plugins/withModularHeaders",
+      "./plugins/withFirebaseAppDelegate"
     ],
     "platforms": [
       "ios",
