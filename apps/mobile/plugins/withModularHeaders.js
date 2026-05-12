@@ -7,13 +7,19 @@ const path = require('path');
 // find their generated ObjC-Swift bridging headers (e.g. FirebaseAuth-Swift.h).
 // $RNFirebaseAsStaticFramework tells RNFBApp to build as a static framework.
 const MODULAR_PODS = [
-  'GoogleUtilities',
+  'Firebase',
+  'FirebaseAuth',
+  'FirebaseCore',
+  'FirebaseCoreExtension',
   'FirebaseCoreInternal',
+  'FirebaseInstallations',
+  'FirebaseSessions',
   'FirebaseAuthInterop',
   'FirebaseAppCheckInterop',
+  'GoogleUtilities',
+  'GoogleDataTransport',
   'RecaptchaInterop',
   'nanopb',
-  'GoogleDataTransport',
 ];
 
 module.exports = function withModularHeaders(config) {
