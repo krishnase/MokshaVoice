@@ -85,19 +85,24 @@ export default function AppLayout() {
     if (!user) return;
 
     (async () => {
-      const { status: existing } = await Notifications.getPermissionsAsync();
-      let finalStatus = existing;
-      if (existing !== 'granted') {
-        const { status } = await Notifications.requestPermissionsAsync();
-        finalStatus = status;
-      }
-      if (finalStatus !== 'granted') return;
+      try {
+        const { status: existing } = await Notifications.getPermissionsAsync();
+        let finalStatus = existing;
+        if (existing !== 'granted') {
+          const { status } = await Notifications.requestPermissionsAsync();
+          finalStatus = status;
+        }
+        if (finalStatus !== 'granted') return;
 
-      const tokenData = await Notifications.getExpoPushTokenAsync();
-      // Register token with backend so we can send push notifications
-      await api
-        .post('/v1/me/fcm-token', { token: tokenData.data })
-        .catch((err) => console.warn('FCM token register failed:', err));
+        const tokenData = await Notifications.getExpoPushTokenAsync({
+          projectId: '312e16ea-7207-4066-8d46-1e7be8f6068c',
+        });
+        await api
+          .post('/v1/me/fcm-token', { token: tokenData.data })
+          .catch((err) => console.warn('FCM token register failed:', err));
+      } catch (err) {
+        console.warn('Push notification setup failed:', err);
+      }
     })();
   }, [user?.id]);
 
