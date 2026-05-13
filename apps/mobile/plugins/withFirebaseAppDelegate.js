@@ -1,25 +1,27 @@
-const { withAppDelegate } = require('@expo/config-plugins');
+const { withAppDelegate } = require('expo/config-plugins');
 
-// Explicitly initialize Firebase in AppDelegate so it works with
+// Explicitly initialize Firebase in the Swift AppDelegate so it works with
 // use_frameworks! :linkage => :static where +load ordering is unreliable.
 module.exports = function withFirebaseAppDelegate(config) {
   return withAppDelegate(config, (config) => {
     let contents = config.modResults.contents;
 
-    if (contents.includes('[FIRApp configure]')) {
+    if (contents.includes('FirebaseApp.configure()')) {
       return config;
     }
 
-    // Add FirebaseCore import
-    contents = contents.replace(
-      /#import "AppDelegate\.h"/,
-      `#import "AppDelegate.h"\n#import <FirebaseCore/FirebaseCore.h>`,
-    );
+    // Add FirebaseCore import after existing imports
+    if (!contents.includes('import FirebaseCore')) {
+      contents = contents.replace(
+        /^(import Expo)/m,
+        `import FirebaseCore\n$1`,
+      );
+    }
 
-    // Call [FIRApp configure] at the very start of didFinishLaunchingWithOptions
+    // Insert FirebaseApp.configure() at the top of didFinishLaunchingWithOptions
     contents = contents.replace(
-      /(-\s*\(BOOL\)application:\(UIApplication\s*\*\)application\s+didFinishLaunchingWithOptions:\(NSDictionary\s*\*\)launchOptions\s*\{)/,
-      `$1\n  if ([FIRApp defaultApp] == nil) { [FIRApp configure]; }`,
+      /(didFinishLaunchingWithOptions launchOptions: \[UIApplication\.LaunchOptionsKey: Any\]\? = nil\s*\) -> Bool \{)/,
+      `$1\n    if FirebaseApp.app() == nil { FirebaseApp.configure() }`,
     );
 
     config.modResults.contents = contents;
