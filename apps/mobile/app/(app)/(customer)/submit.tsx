@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import {
   View,
   Text,
@@ -7,6 +7,7 @@ import {
   Pressable,
   ScrollView,
   Alert,
+  AppState,
   KeyboardAvoidingView,
   Platform,
   ActivityIndicator,
@@ -50,12 +51,20 @@ export default function SubmitDream() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [focusedNoteId, setFocusedNoteId] = useState<string | null>(null);
 
+  useEffect(() => {
+    Audio.setAudioModeAsync({ allowsRecordingIOS: false, playsInSilentModeIOS: true }).catch(() => {});
+    return () => {
+      Audio.setAudioModeAsync({ allowsRecordingIOS: false }).catch(() => {});
+    };
+  }, []);
+
   const validNotes = notes.filter((n) => n.value.trim().length > 0);
   const canSubmit = clips.length > 0 || validNotes.length > 0;
   const lastNoteHasContent = (notes[notes.length - 1]?.value.trim().length ?? 0) > 0;
 
   async function startRecording() {
     if (isRecording || isOperatingRef.current) return;
+    if (AppState.currentState !== 'active') return;
     isOperatingRef.current = true;
     try {
       const { granted } = await Audio.requestPermissionsAsync();

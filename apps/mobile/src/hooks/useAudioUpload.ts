@@ -1,4 +1,5 @@
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
+import { AppState } from 'react-native';
 import { Audio } from 'expo-av';
 import type { Recording } from 'expo-av/build/Audio/Recording';
 import { api } from '../lib/api';
@@ -54,8 +55,16 @@ export function useAudioUpload(): UseAudioUploadReturn {
   const [uploadProgress, setUploadProgress] = useState(0);
   const [error, setError] = useState<string | null>(null);
 
+  useEffect(() => {
+    Audio.setAudioModeAsync({ allowsRecordingIOS: false, playsInSilentModeIOS: true }).catch(() => {});
+    return () => {
+      Audio.setAudioModeAsync({ allowsRecordingIOS: false }).catch(() => {});
+    };
+  }, []);
+
   const startRecording = useCallback(async () => {
     if (recordingRef.current) return;
+    if (AppState.currentState !== 'active') return;
     setError(null);
     try {
       const { status } = await Audio.requestPermissionsAsync();
