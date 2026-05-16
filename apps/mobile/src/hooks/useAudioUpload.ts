@@ -12,6 +12,11 @@ export interface AudioUploadResult {
   audioDurationS: number;
 }
 
+export interface PendingRecording {
+  uri: string;
+  durationS: number;
+}
+
 interface PresignedUploadResponse {
   messageId: string;
   key: string;
@@ -25,10 +30,13 @@ export interface UseAudioUploadReturn {
   isRecording: boolean;
   recordingDurationMs: number;
   isUploading: boolean;
-  uploadProgress: number;      // 0.0 → 1.0
+  uploadProgress: number;
   error: string | null;
+  pendingRecording: PendingRecording | null;
   startRecording: () => Promise<void>;
-  stopAndUpload: (sessionId: string, isDreamSubmission?: boolean) => Promise<AudioUploadResult | null>;
+  stopAndPreview: () => Promise<void>;
+  discardPending: () => void;
+  uploadPending: (sessionId: string, isDreamSubmission?: boolean) => Promise<AudioUploadResult | null>;
   cancelRecording: () => Promise<void>;
 }
 
@@ -54,6 +62,7 @@ export function useAudioUpload(): UseAudioUploadReturn {
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [error, setError] = useState<string | null>(null);
+  const [pendingRecording, setPendingRecording] = useState<PendingRecording | null>(null);
 
   useEffect(() => {
     Audio.setAudioModeAsync({ allowsRecordingIOS: false, playsInSilentModeIOS: true }).catch(() => {});
@@ -73,7 +82,6 @@ export function useAudioUpload(): UseAudioUploadReturn {
         return;
       }
 
-      // Stop any active playback before claiming the audio session for recording
       await stopActiveAudio();
 
       await Audio.setAudioModeAsync({
@@ -90,60 +98,71 @@ export function useAudioUpload(): UseAudioUploadReturn {
       setRecordingDurationMs(0);
       setIsRecording(true);
 
-      // Tick duration every 100ms for the UI timer
       durationIntervalRef.current = setInterval(() => {
         setRecordingDurationMs(Date.now() - startTimeRef.current);
       }, 100);
     } catch (err: unknown) {
       const e = err as { message?: string };
-      // Reset audio mode so the next attempt can set it correctly
       try { await Audio.setAudioModeAsync({ allowsRecordingIOS: false }); } catch {}
       setError(e.message ?? 'Failed to start recording');
     }
   }, []);
 
-  const stopAndUpload = useCallback(
-    async (sessionId: string, isDreamSubmission = false): Promise<AudioUploadResult | null> => {
-      if (!recordingRef.current || !isRecording) return null;
+  const stopAndPreview = useCallback(async () => {
+    if (!recordingRef.current || !isRecording) return;
 
-      // Clear duration ticker
-      if (durationIntervalRef.current) {
-        clearInterval(durationIntervalRef.current);
-        durationIntervalRef.current = null;
+    if (durationIntervalRef.current) {
+      clearInterval(durationIntervalRef.current);
+      durationIntervalRef.current = null;
+    }
+
+    setIsRecording(false);
+    const durationS = Math.max(1, Math.round(recordingDurationMs / 1000));
+
+    try {
+      await recordingRef.current.stopAndUnloadAsync();
+      const uri = recordingRef.current.getURI();
+      recordingRef.current = null;
+
+      await Audio.setAudioModeAsync({ allowsRecordingIOS: false });
+
+      if (uri) {
+        setPendingRecording({ uri, durationS });
       }
+    } catch (err: unknown) {
+      recordingRef.current = null;
+      const e = err as { message?: string };
+      setError(e.message ?? 'Failed to stop recording');
+    }
+  }, [isRecording, recordingDurationMs]);
 
-      setIsRecording(false);
+  const discardPending = useCallback(() => {
+    setPendingRecording(null);
+    setError(null);
+  }, []);
+
+  const uploadPending = useCallback(
+    async (sessionId: string, isDreamSubmission = false): Promise<AudioUploadResult | null> => {
+      if (!pendingRecording) return null;
+
       setIsUploading(true);
       setUploadProgress(0);
       setError(null);
 
+      const { uri, durationS } = pendingRecording;
+      setPendingRecording(null);
+
       try {
-        // 1. Stop recording and get local URI
-        await recordingRef.current.stopAndUnloadAsync();
-        const uri = recordingRef.current.getURI();
-        recordingRef.current = null;
-
-        if (!uri) throw new Error('Recording produced no file');
-
-        const audioDurationS = Math.max(1, Math.round(recordingDurationMs / 1000));
-
-        // Reset audio mode so playback works normally after recording
-        await Audio.setAudioModeAsync({ allowsRecordingIOS: false });
-
-        // 2. Get presigned S3 PUT URL from backend
         const presigned = await api.post<PresignedUploadResponse>('/v1/audio/presigned-upload', {
           sessionId,
           contentType: 'audio/m4a',
-          durationS: audioDurationS,
+          durationS,
         });
 
         setUploadProgress(0.1);
 
-        // 3. PUT audio bytes directly to S3 via presigned URL
-        //    Using XMLHttpRequest for upload progress events — fetch() does not
-        //    expose upload progress in React Native.
         await uploadToS3(presigned.uploadUrl, uri, (progress) => {
-          setUploadProgress(0.1 + progress * 0.85); // 10% → 95%
+          setUploadProgress(0.1 + progress * 0.85);
         });
 
         setUploadProgress(1);
@@ -152,7 +171,7 @@ export function useAudioUpload(): UseAudioUploadReturn {
           messageId: presigned.messageId,
           key: presigned.key,
           playbackUrl: presigned.playbackUrl,
-          audioDurationS,
+          audioDurationS: durationS,
         };
       } catch (err: unknown) {
         const e = err as { message?: string };
@@ -162,7 +181,7 @@ export function useAudioUpload(): UseAudioUploadReturn {
         setIsUploading(false);
       }
     },
-    [isRecording, recordingDurationMs],
+    [pendingRecording],
   );
 
   const cancelRecording = useCallback(async () => {
@@ -174,13 +193,14 @@ export function useAudioUpload(): UseAudioUploadReturn {
       try {
         await recordingRef.current.stopAndUnloadAsync();
       } catch {
-        // Best-effort — recording may already be stopped
+        // Best-effort
       }
       recordingRef.current = null;
     }
     await Audio.setAudioModeAsync({ allowsRecordingIOS: false });
     setIsRecording(false);
     setRecordingDurationMs(0);
+    setPendingRecording(null);
     setError(null);
   }, []);
 
@@ -190,8 +210,11 @@ export function useAudioUpload(): UseAudioUploadReturn {
     isUploading,
     uploadProgress,
     error,
+    pendingRecording,
     startRecording,
-    stopAndUpload,
+    stopAndPreview,
+    discardPending,
+    uploadPending,
     cancelRecording,
   };
 }
@@ -225,9 +248,8 @@ function uploadToS3(
 
     xhr.open('PUT', presignedUrl, true);
     xhr.setRequestHeader('Content-Type', 'audio/m4a');
-    xhr.timeout = 120_000; // 2 min max upload time
+    xhr.timeout = 120_000;
 
-    // React Native XHR supports { uri } blobs directly
     xhr.send({ uri: fileUri } as unknown as Document);
   });
 }

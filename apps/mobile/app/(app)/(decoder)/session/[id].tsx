@@ -19,6 +19,7 @@ import { VoiceBubble } from '@/src/components/VoiceBubble';
 import { TextBubble } from '@/src/components/TextBubble';
 import { TypingIndicator } from '@/src/components/TypingIndicator';
 import { HoldToRecord } from '@/src/components/HoldToRecord';
+import { RecordingPreview } from '@/src/components/RecordingPreview';
 import { useMessages } from '@/src/hooks/useMessages';
 import { useAudioPlayer } from '@/src/hooks/useAudioPlayer';
 import { useAudioUpload } from '@/src/hooks/useAudioUpload';
@@ -80,7 +81,7 @@ export default function DecoderSession() {
 
   const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading } = useMessages(id);
   const audioPlayer = useAudioPlayer();
-  const { isRecording, recordingDurationMs, isUploading, startRecording, stopAndUpload, cancelRecording, error: recordingError } = useAudioUpload();
+  const { isRecording, recordingDurationMs, isUploading, uploadProgress, pendingRecording, startRecording, stopAndPreview, discardPending, uploadPending, cancelRecording, error: recordingError } = useAudioUpload();
 
   const [session, setSession] = useState<SessionDetail | null>(null);
   const [team, setTeam] = useState<TeamMember[]>([]);
@@ -272,8 +273,11 @@ export default function DecoderSession() {
   const handleHoldStart = async () => { await startRecording(); };
   const handleHoldEnd = async () => {
     if (!isRecording) return;
+    await stopAndPreview();
+  };
+  const handleSendPending = async () => {
     try {
-      const uploaded = await stopAndUpload(id);
+      const uploaded = await uploadPending(id);
       if (!uploaded) return;
       await api.post(`/v1/sessions/${id}/messages`, {
         type: 'VOICE', messageId: uploaded.messageId, audioKey: uploaded.key,
@@ -375,11 +379,20 @@ export default function DecoderSession() {
         {status === 'IN_PROGRESS' && isMyClaim && (
           <View style={styles.inputArea}>
             {recordingError ? <Text style={styles.errorText}>{recordingError}</Text> : null}
-            {isRecording ? (
+            {pendingRecording ? (
+              <RecordingPreview
+                durationS={pendingRecording.durationS}
+                isUploading={isUploading}
+                uploadProgress={uploadProgress}
+                onDiscard={discardPending}
+                onSend={handleSendPending}
+                accentColor={Colors.orange}
+              />
+            ) : isRecording ? (
               <HoldToRecord isRecording={isRecording} onHoldStart={handleHoldStart} onHoldEnd={handleHoldEnd} onCancel={() => cancelRecording()} durationMs={recordingDurationMs} />
             ) : (
               <View style={styles.textRow}>
-                <HoldToRecord isRecording={false} isDisabled={isUploading || isSending} compact onHoldStart={handleHoldStart} onHoldEnd={handleHoldEnd} onCancel={() => cancelRecording()} durationMs={0} />
+                <HoldToRecord isRecording={false} isDisabled={isUploading || isSending || !!pendingRecording} compact onHoldStart={handleHoldStart} onHoldEnd={handleHoldEnd} onCancel={() => cancelRecording()} durationMs={0} />
                 <TextInput
                   style={styles.input} placeholder="Type your analysis…" placeholderTextColor={Colors.gray4}
                   value={textInput} onChangeText={handleTextChange} multiline maxLength={4000} editable={!isSending && !isUploading}

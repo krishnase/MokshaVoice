@@ -17,6 +17,7 @@ import { VoiceBubble } from '@/src/components/VoiceBubble';
 import { TextBubble } from '@/src/components/TextBubble';
 import { TypingIndicator } from '@/src/components/TypingIndicator';
 import { HoldToRecord } from '@/src/components/HoldToRecord';
+import { RecordingPreview } from '@/src/components/RecordingPreview';
 import { useMessages } from '@/src/hooks/useMessages';
 import { useAudioPlayer } from '@/src/hooks/useAudioPlayer';
 import { useAudioUpload } from '@/src/hooks/useAudioUpload';
@@ -59,8 +60,12 @@ export default function SessionChat() {
     isRecording,
     recordingDurationMs,
     isUploading,
+    uploadProgress,
+    pendingRecording,
     startRecording,
-    stopAndUpload,
+    stopAndPreview,
+    discardPending,
+    uploadPending,
     cancelRecording,
     error: recordingError,
   } = useAudioUpload();
@@ -150,8 +155,12 @@ export default function SessionChat() {
 
   const handleHoldEnd = async () => {
     if (!isRecording) return;
+    await stopAndPreview();
+  };
+
+  const handleSendPending = async () => {
     try {
-      const uploaded = await stopAndUpload(id);
+      const uploaded = await uploadPending(id);
       if (!uploaded) return;
       await api.post(`/v1/sessions/${id}/messages`, {
         type: 'VOICE',
@@ -213,7 +222,7 @@ export default function SessionChat() {
 
   const status = session?.status ?? 'NEW';
   const isCompleted = status === 'COMPLETED';
-  const inputDisabled = isCompleted || isSending || isUploading;
+  const inputDisabled = isCompleted || isSending || isUploading || !!pendingRecording;
   const statusMeta = STATUS_BAR[status];
   const decoderName = session?.claimer?.displayName ?? (session?.claimer ? maskPhone(session.claimer.phone) : null);
 
@@ -263,7 +272,16 @@ export default function SessionChat() {
         ) : (
           <View style={styles.inputArea}>
             {recordingError ? <Text style={styles.recordingError}>{recordingError}</Text> : null}
-            {isRecording ? (
+            {pendingRecording ? (
+              <RecordingPreview
+                durationS={pendingRecording.durationS}
+                isUploading={isUploading}
+                uploadProgress={uploadProgress}
+                onDiscard={discardPending}
+                onSend={handleSendPending}
+                accentColor={Colors.orange}
+              />
+            ) : isRecording ? (
               <HoldToRecord
                 isRecording={isRecording}
                 onHoldStart={handleHoldStart}
