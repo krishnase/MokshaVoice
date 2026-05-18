@@ -57,6 +57,7 @@ export function VoiceBubble({
   const isActive = activeMessageId === messageId;
   const totalMs = isActive && durationMs > 0 ? durationMs : durationS * 1000;
   const progress = isActive && totalMs > 0 ? positionMs / totalMs : 0;
+  const canDelete = isMe && !!onDelete && (Date.now() - new Date(createdAt).getTime()) <= 3_600_000;
 
   const handlePress = () => {
     if (isActive && isPlaying) onPause();
@@ -78,10 +79,10 @@ export function VoiceBubble({
       activeOpacity={1}
       delayLongPress={400}
       onLongPress={() => {
-        if (!isMe || !onDelete) return;
+        if (!canDelete) return;
         Alert.alert('Delete message', 'This will remove the voice message for everyone.', [
           { text: 'Cancel', style: 'cancel' },
-          { text: 'Delete', style: 'destructive', onPress: () => onDelete(messageId) },
+          { text: 'Delete', style: 'destructive', onPress: () => onDelete!(messageId) },
         ]);
       }}
     >

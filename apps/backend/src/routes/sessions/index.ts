@@ -460,6 +460,9 @@ export const sessionRoutes: FastifyPluginAsync = async (fastify) => {
     });
     if (!message) return reply.status(404).send({ error: 'Message not found' });
     if (message.senderId !== userId) return reply.status(403).send({ error: 'Not your message' });
+    if (Date.now() - new Date(message.createdAt).getTime() > 3_600_000) {
+      return reply.status(403).send({ error: 'Messages cannot be deleted after 1 hour.' });
+    }
 
     await prisma.message.delete({ where: { id: messageId } });
     fastify.io.to(id).emit('message:deleted', { messageId });
