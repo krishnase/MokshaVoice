@@ -1,4 +1,4 @@
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, TouchableOpacity, Alert, StyleSheet } from 'react-native';
 import { Colors } from '@/src/theme';
 
 interface Props {
@@ -17,6 +17,7 @@ interface Props {
   durationMs: number;
   onPlay: (messageId: string, url: string) => void;
   onPause: () => void;
+  onDelete?: (messageId: string) => void;
 }
 
 function formatTime(ms: number): string {
@@ -51,6 +52,7 @@ export function VoiceBubble({
   durationMs,
   onPlay,
   onPause,
+  onDelete,
 }: Props) {
   const isActive = activeMessageId === messageId;
   const totalMs = isActive && durationMs > 0 ? durationMs : durationS * 1000;
@@ -71,7 +73,18 @@ export function VoiceBubble({
   const barBg = isMe ? 'rgba(255,255,255,0.85)' : roleColor(senderRole) + 'CC';
 
   return (
-    <View style={[styles.container, isMe ? styles.containerMe : styles.containerThem]}>
+    <TouchableOpacity
+      style={[styles.container, isMe ? styles.containerMe : styles.containerThem]}
+      activeOpacity={1}
+      delayLongPress={400}
+      onLongPress={() => {
+        if (!isMe || !onDelete) return;
+        Alert.alert('Delete message', 'This will remove the voice message for everyone.', [
+          { text: 'Cancel', style: 'cancel' },
+          { text: 'Delete', style: 'destructive', onPress: () => onDelete(messageId) },
+        ]);
+      }}
+    >
       {!isMe && senderName && (
         <Text style={[styles.senderName, { color: roleColor(senderRole) }]}>
           {senderName}
@@ -108,7 +121,7 @@ export function VoiceBubble({
       <Text style={[styles.timestamp, isMe ? styles.timestampMe : styles.timestampThem]}>
         {formatHHMMSS(createdAt)}
       </Text>
-    </View>
+    </TouchableOpacity>
   );
 }
 

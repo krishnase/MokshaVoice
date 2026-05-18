@@ -120,6 +120,7 @@ export const api = {
   post: <T>(path: string, body?: unknown) => request<T>('POST', path, body),
   put: <T>(path: string, body?: unknown) => request<T>('PUT', path, body),
   patch: <T>(path: string, body?: unknown) => request<T>('PATCH', path, body),
+  delete: <T = void>(path: string) => request<T>('DELETE', path),
   // Default 90 s timeout for multipart uploads (audio files can be large)
   postForm: <T>(path: string, form: FormData, timeoutMs = 90_000) =>
     request<T>('POST', path, form, true, timeoutMs),

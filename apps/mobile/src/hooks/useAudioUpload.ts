@@ -65,9 +65,27 @@ export function useAudioUpload(): UseAudioUploadReturn {
   const [pendingRecording, setPendingRecording] = useState<PendingRecording | null>(null);
 
   useEffect(() => {
-    Audio.setAudioModeAsync({ allowsRecordingIOS: false, playsInSilentModeIOS: true }).catch(() => {});
+    Audio.setAudioModeAsync({
+      allowsRecordingIOS: false,
+      playsInSilentModeIOS: true,
+      shouldDuckAndroid: true,
+      playThroughEarpieceAndroid: false,
+    }).catch(() => {});
     return () => {
-      Audio.setAudioModeAsync({ allowsRecordingIOS: false }).catch(() => {});
+      // Stop any in-flight recording so it doesn't block other screens from recording
+      if (durationIntervalRef.current) {
+        clearInterval(durationIntervalRef.current);
+        durationIntervalRef.current = null;
+      }
+      if (recordingRef.current) {
+        recordingRef.current.stopAndUnloadAsync().catch(() => {});
+        recordingRef.current = null;
+      }
+      Audio.setAudioModeAsync({
+        allowsRecordingIOS: false,
+        shouldDuckAndroid: true,
+        playThroughEarpieceAndroid: false,
+      }).catch(() => {});
     };
   }, []);
 
@@ -87,6 +105,8 @@ export function useAudioUpload(): UseAudioUploadReturn {
       await Audio.setAudioModeAsync({
         allowsRecordingIOS: true,
         playsInSilentModeIOS: true,
+        shouldDuckAndroid: false,
+        playThroughEarpieceAndroid: false,
       });
 
       const recording = new Audio.Recording();
@@ -103,7 +123,7 @@ export function useAudioUpload(): UseAudioUploadReturn {
       }, 100);
     } catch (err: unknown) {
       const e = err as { message?: string };
-      try { await Audio.setAudioModeAsync({ allowsRecordingIOS: false }); } catch {}
+      try { await Audio.setAudioModeAsync({ allowsRecordingIOS: false, shouldDuckAndroid: true, playThroughEarpieceAndroid: false }); } catch {}
       setError(e.message ?? 'Failed to start recording');
     }
   }, []);
@@ -124,7 +144,7 @@ export function useAudioUpload(): UseAudioUploadReturn {
       const uri = recordingRef.current.getURI();
       recordingRef.current = null;
 
-      await Audio.setAudioModeAsync({ allowsRecordingIOS: false });
+      await Audio.setAudioModeAsync({ allowsRecordingIOS: false, shouldDuckAndroid: true, playThroughEarpieceAndroid: false });
 
       if (uri) {
         setPendingRecording({ uri, durationS });
@@ -197,7 +217,7 @@ export function useAudioUpload(): UseAudioUploadReturn {
       }
       recordingRef.current = null;
     }
-    await Audio.setAudioModeAsync({ allowsRecordingIOS: false });
+    await Audio.setAudioModeAsync({ allowsRecordingIOS: false, shouldDuckAndroid: true, playThroughEarpieceAndroid: false });
     setIsRecording(false);
     setRecordingDurationMs(0);
     setPendingRecording(null);

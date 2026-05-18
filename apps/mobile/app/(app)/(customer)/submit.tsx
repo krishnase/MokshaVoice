@@ -52,9 +52,13 @@ export default function SubmitDream() {
   const [focusedNoteId, setFocusedNoteId] = useState<string | null>(null);
 
   useEffect(() => {
-    Audio.setAudioModeAsync({ allowsRecordingIOS: false, playsInSilentModeIOS: true }).catch(() => {});
+    Audio.setAudioModeAsync({ allowsRecordingIOS: false, playsInSilentModeIOS: true, shouldDuckAndroid: true, playThroughEarpieceAndroid: false }).catch(() => {});
     return () => {
-      Audio.setAudioModeAsync({ allowsRecordingIOS: false }).catch(() => {});
+      if (recordingRef.current) {
+        recordingRef.current.stopAndUnloadAsync().catch(() => {});
+        recordingRef.current = null;
+      }
+      Audio.setAudioModeAsync({ allowsRecordingIOS: false, shouldDuckAndroid: true, playThroughEarpieceAndroid: false }).catch(() => {});
     };
   }, []);
 
@@ -72,7 +76,7 @@ export default function SubmitDream() {
         Alert.alert('Permission required', 'Microphone access is needed to record your dream.');
         return;
       }
-      await Audio.setAudioModeAsync({ allowsRecordingIOS: true, playsInSilentModeIOS: true });
+      await Audio.setAudioModeAsync({ allowsRecordingIOS: true, playsInSilentModeIOS: true, shouldDuckAndroid: false, playThroughEarpieceAndroid: false });
       const { recording } = await Audio.Recording.createAsync(
         Audio.RecordingOptionsPresets.HIGH_QUALITY,
       );
@@ -95,7 +99,7 @@ export default function SubmitDream() {
     recordingRef.current = null;
     try {
       await rec.stopAndUnloadAsync();
-      await Audio.setAudioModeAsync({ allowsRecordingIOS: false });
+      await Audio.setAudioModeAsync({ allowsRecordingIOS: false, shouldDuckAndroid: true, playThroughEarpieceAndroid: false });
       const uri = rec.getURI();
       const durationS = Math.round((Date.now() - startTimeRef.current) / 1000);
       if (uri && durationS >= 1) {

@@ -95,6 +95,11 @@ export default function SessionChat() {
       void queryClient.invalidateQueries({ queryKey: ['sessions'] });
     });
 
+    socket.on('message:deleted', ({ messageId }: { messageId: string }) => {
+      setSocketMessages((prev) => prev.filter((m) => m.id !== messageId));
+      void queryClient.invalidateQueries({ queryKey: ['messages', id] });
+    });
+
     socket.on('session:status', ({ session_id, status, claimed_by }) => {
       if (session_id !== id) return;
       setSession((prev) => prev ? { ...prev, status, claimedBy: claimed_by } : prev);
@@ -108,6 +113,7 @@ export default function SessionChat() {
 
     return () => {
       socket.off('message:new');
+      socket.off('message:deleted');
       socket.off('session:status');
       socket.off('typing');
     };
@@ -173,6 +179,14 @@ export default function SessionChat() {
     finally { void queryClient.invalidateQueries({ queryKey: ['messages', id] }); }
   };
 
+  const handleDeleteMessage = useCallback(async (messageId: string) => {
+    try {
+      await api.delete(`/v1/sessions/${id}/messages/${messageId}`);
+      setSocketMessages((prev) => prev.filter((m) => m.id !== messageId));
+      void queryClient.invalidateQueries({ queryKey: ['messages', id] });
+    } catch { /* best-effort */ }
+  }, [id, queryClient]);
+
   const renderItem = useCallback(
     ({ item }: { item: MessageWithSender }) => {
       const isMe = item.senderId === user?.id;
@@ -199,6 +213,7 @@ export default function SessionChat() {
             durationMs={audioPlayer.durationMs}
             onPlay={audioPlayer.play}
             onPause={audioPlayer.pause}
+            onDelete={isMe ? handleDeleteMessage : undefined}
           />
         );
       }
@@ -217,7 +232,7 @@ export default function SessionChat() {
         <TextBubble content={item.content ?? ''} senderName={null} isMe={false} createdAt={item.createdAt} isSystem />
       );
     },
-    [user?.id, audioPlayer],
+    [user?.id, audioPlayer, handleDeleteMessage],
   );
 
   const status = session?.status ?? 'NEW';

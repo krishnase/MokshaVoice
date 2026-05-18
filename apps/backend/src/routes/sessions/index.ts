@@ -447,6 +447,24 @@ export const sessionRoutes: FastifyPluginAsync = async (fastify) => {
     fastify.io.to(id).emit('message:new', { message: message as never });
     return reply.status(201).send(message);
   });
+
+  // DELETE /sessions/:id/messages/:messageId
+  fastify.delete('/:id/messages/:messageId', async (request, reply) => {
+    const { id, messageId } = z
+      .object({ id: z.string().uuid(), messageId: z.string().uuid() })
+      .parse(request.params);
+    const userId = request.user.sub;
+
+    const message = await prisma.message.findFirst({
+      where: { id: messageId, sessionId: id },
+    });
+    if (!message) return reply.status(404).send({ error: 'Message not found' });
+    if (message.senderId !== userId) return reply.status(403).send({ error: 'Not your message' });
+
+    await prisma.message.delete({ where: { id: messageId } });
+    fastify.io.to(id).emit('message:deleted', { messageId });
+    return reply.status(204).send();
+  });
 };
 
 async function createSessionForUser(userId: string) {

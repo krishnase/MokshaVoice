@@ -79,7 +79,7 @@ const styles = StyleSheet.create({
   micIcon: { fontSize: 24 },
   meta: { gap: 2 },
   label: { color: Colors.gray3, fontSize: 12, fontFamily: 'Inter_500Medium' },
-  duration: { color: Colors.white, fontSize: 15, fontFamily: 'Inter_600SemiBold', fontVariant: ['tabular-nums'] },
+  duration: { color: Colors.white, fontSize: 15, fontFamily: 'Inter_600SemiBold' },
   progressBar: {
     height: 3,
     backgroundColor: Colors.navyCard,

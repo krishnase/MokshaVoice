@@ -100,6 +100,10 @@ export default function AnalyzerSession() {
     socket.on('message:new', ({ message }) => {
       setSocketMessages((prev) => prev.some((m) => m.id === message.id) ? prev : [message, ...prev]);
     });
+    socket.on('message:deleted', ({ messageId }: { messageId: string }) => {
+      setSocketMessages((prev) => prev.filter((m) => m.id !== messageId));
+      void queryClient.invalidateQueries({ queryKey: ['messages', id] });
+    });
     socket.on('session:status', ({ status: newStatus }) => {
       setSession((prev) => prev ? { ...prev, status: newStatus as SessionStatus } : prev);
     });
@@ -107,7 +111,7 @@ export default function AnalyzerSession() {
       if (user_id === user?.id) return;
       setTypingUserId(is_typing ? user_id : (prev: string | null) => prev === user_id ? null : prev);
     });
-    return () => { socket.off('message:new'); socket.off('session:status'); socket.off('typing'); };
+    return () => { socket.off('message:new'); socket.off('message:deleted'); socket.off('session:status'); socket.off('typing'); };
   }, [id, user?.id]);
 
   const queryMessages = useMemo(() => data?.pages.flatMap((p) => p.data) ?? [], [data]);
@@ -242,6 +246,14 @@ export default function AnalyzerSession() {
     finally { void queryClient.invalidateQueries({ queryKey: ['messages', id] }); }
   };
 
+  const handleDeleteMessage = useCallback(async (messageId: string) => {
+    try {
+      await api.delete(`/v1/sessions/${id}/messages/${messageId}`);
+      setSocketMessages((prev) => prev.filter((m) => m.id !== messageId));
+      void queryClient.invalidateQueries({ queryKey: ['messages', id] });
+    } catch { /* best-effort */ }
+  }, [id, queryClient]);
+
   const renderItem = useCallback(({ item }: { item: MessageWithSender }) => {
     const isMe = item.senderId === user?.id;
     const senderName = item.sender.displayName ?? (
@@ -258,6 +270,7 @@ export default function AnalyzerSession() {
           activeMessageId={audioPlayer.currentMessageId} isPlaying={audioPlayer.isPlaying}
           isLoading={audioPlayer.isLoading} positionMs={audioPlayer.positionMs} durationMs={audioPlayer.durationMs}
           onPlay={audioPlayer.play} onPause={audioPlayer.pause}
+          onDelete={isMe ? handleDeleteMessage : undefined}
         />
       );
     }
@@ -265,7 +278,7 @@ export default function AnalyzerSession() {
       return <TextBubble content={item.content ?? ''} senderName={senderName} senderRole={senderRole} isMe={isMe} createdAt={item.createdAt} />;
     }
     return <TextBubble content={item.content ?? ''} senderName={null} isMe={false} createdAt={item.createdAt} isSystem />;
-  }, [user?.id, audioPlayer]);
+  }, [user?.id, audioPlayer, handleDeleteMessage]);
 
   const status = session?.status ?? 'NEW';
   const isMySession = session?.analyzerId === user?.id;
