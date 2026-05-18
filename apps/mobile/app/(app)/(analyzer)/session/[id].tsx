@@ -79,6 +79,7 @@ export default function AnalyzerSession() {
   const [decoders, setDecoders] = useState<Member[]>([]);
   const [analyzers, setAnalyzers] = useState<Member[]>([]);
   const [socketMessages, setSocketMessages] = useState<MessageWithSender[]>([]);
+  const [deletedIds, setDeletedIds] = useState<Set<string>>(new Set());
   const [typingUserId, setTypingUserId] = useState<string | null>(null);
   const [textInput, setTextInput] = useState('');
   const [isSending, setIsSending] = useState(false);
@@ -101,6 +102,7 @@ export default function AnalyzerSession() {
       setSocketMessages((prev) => prev.some((m) => m.id === message.id) ? prev : [message, ...prev]);
     });
     socket.on('message:deleted', ({ messageId }: { messageId: string }) => {
+      setDeletedIds((prev) => new Set([...prev, messageId]));
       setSocketMessages((prev) => prev.filter((m) => m.id !== messageId));
       void queryClient.invalidateQueries({ queryKey: ['messages', id] });
     });
@@ -117,9 +119,9 @@ export default function AnalyzerSession() {
   const queryMessages = useMemo(() => data?.pages.flatMap((p) => p.data) ?? [], [data]);
   const displayMessages = useMemo(() => {
     const allIds = new Set(socketMessages.map((m) => m.id));
-    const filteredQuery = queryMessages.filter((m) => !allIds.has(m.id)).sort((a, b) => b.createdAt.localeCompare(a.createdAt));
-    return [...socketMessages, ...filteredQuery];
-  }, [socketMessages, queryMessages]);
+    const filteredQuery = queryMessages.filter((m) => !allIds.has(m.id) && !deletedIds.has(m.id)).sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+    return [...socketMessages.filter((m) => !deletedIds.has(m.id)), ...filteredQuery];
+  }, [socketMessages, queryMessages, deletedIds]);
 
   const emitTyping = useCallback((isTyping: boolean) => getSocket().emit('typing', { session_id: id, is_typing: isTyping }), [id]);
 
@@ -247,11 +249,13 @@ export default function AnalyzerSession() {
   };
 
   const handleDeleteMessage = useCallback(async (messageId: string) => {
+    setDeletedIds((prev) => new Set([...prev, messageId]));
     try {
       await api.delete(`/v1/sessions/${id}/messages/${messageId}`);
-      setSocketMessages((prev) => prev.filter((m) => m.id !== messageId));
       void queryClient.invalidateQueries({ queryKey: ['messages', id] });
-    } catch { /* best-effort */ }
+    } catch {
+      setDeletedIds((prev) => { const next = new Set(prev); next.delete(messageId); return next; });
+    }
   }, [id, queryClient]);
 
   const renderItem = useCallback(({ item }: { item: MessageWithSender }) => {

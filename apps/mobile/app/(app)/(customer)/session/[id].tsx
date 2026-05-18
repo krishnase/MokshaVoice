@@ -72,6 +72,7 @@ export default function SessionChat() {
 
   const [session, setSession] = useState<SessionDetail | null>(null);
   const [socketMessages, setSocketMessages] = useState<MessageWithSender[]>([]);
+  const [deletedIds, setDeletedIds] = useState<Set<string>>(new Set());
   const [typingUserId, setTypingUserId] = useState<string | null>(null);
   const [textInput, setTextInput] = useState('');
   const [isSending, setIsSending] = useState(false);
@@ -96,6 +97,7 @@ export default function SessionChat() {
     });
 
     socket.on('message:deleted', ({ messageId }: { messageId: string }) => {
+      setDeletedIds((prev) => new Set([...prev, messageId]));
       setSocketMessages((prev) => prev.filter((m) => m.id !== messageId));
       void queryClient.invalidateQueries({ queryKey: ['messages', id] });
     });
@@ -124,10 +126,10 @@ export default function SessionChat() {
   const displayMessages = useMemo(() => {
     const allIds = new Set(socketMessages.map((m) => m.id));
     const filteredQuery = queryMessages
-      .filter((m) => !allIds.has(m.id))
+      .filter((m) => !allIds.has(m.id) && !deletedIds.has(m.id))
       .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
-    return [...socketMessages, ...filteredQuery];
-  }, [socketMessages, queryMessages]);
+    return [...socketMessages.filter((m) => !deletedIds.has(m.id)), ...filteredQuery];
+  }, [socketMessages, queryMessages, deletedIds]);
 
   const emitTyping = useCallback(
     (isTyping: boolean) => getSocket().emit('typing', { session_id: id, is_typing: isTyping }),
@@ -180,11 +182,13 @@ export default function SessionChat() {
   };
 
   const handleDeleteMessage = useCallback(async (messageId: string) => {
+    setDeletedIds((prev) => new Set([...prev, messageId]));
     try {
       await api.delete(`/v1/sessions/${id}/messages/${messageId}`);
-      setSocketMessages((prev) => prev.filter((m) => m.id !== messageId));
       void queryClient.invalidateQueries({ queryKey: ['messages', id] });
-    } catch { /* best-effort */ }
+    } catch {
+      setDeletedIds((prev) => { const next = new Set(prev); next.delete(messageId); return next; });
+    }
   }, [id, queryClient]);
 
   const renderItem = useCallback(
