@@ -28,6 +28,7 @@ export default function VerifyScreen() {
   const inputRefs = useRef<Array<TextInput | null>>(Array(OTP_LENGTH).fill(null));
   const { setTokens, setUser } = useAuthStore();
   const { setSubscription } = useSubscriptionStore();
+  const isVerifyingRef = useRef(false);
 
   const [otp, setOtp] = useState<string[]>(Array(OTP_LENGTH).fill(''));
   const [isVerifying, setIsVerifying] = useState(false);
@@ -37,7 +38,6 @@ export default function VerifyScreen() {
   const phone = phoneAuthStore.getPhone();
   const maskedPhone = phone.replace(/(\+\d{1,3})(\d+)(\d{4})/, '$1 ••••• $3');
 
-  // Countdown timer
   useEffect(() => {
     if (countdown <= 0) return;
     const id = setTimeout(() => setCountdown((c) => c - 1), 1000);
@@ -47,44 +47,9 @@ export default function VerifyScreen() {
   const filledOtp = otp.join('');
   const isComplete = filledOtp.length === OTP_LENGTH;
 
-  // Auto-submit when all 6 digits entered
-  useEffect(() => {
-    if (isComplete) handleVerify();
-  }, [isComplete]);
-
-  function handleCellChange(index: number, value: string) {
-    const digit = value.replace(/\D/g, '').slice(-1);
-
-    const next = [...otp];
-    next[index] = digit;
-    setOtp(next);
-
-    if (digit && index < OTP_LENGTH - 1) {
-      inputRefs.current[index + 1]?.focus();
-    }
-  }
-
-  function handleCellKeyPress(index: number, key: string) {
-    if (key === 'Backspace' && !otp[index] && index > 0) {
-      const next = [...otp];
-      next[index - 1] = '';
-      setOtp(next);
-      inputRefs.current[index - 1]?.focus();
-    }
-  }
-
-  // Handle paste of full OTP code
-  function handlePaste(text: string) {
-    const digits = text.replace(/\D/g, '').slice(0, OTP_LENGTH).split('');
-    if (digits.length === OTP_LENGTH) {
-      setOtp(digits);
-      inputRefs.current[OTP_LENGTH - 1]?.focus();
-    }
-  }
-
-  const handleVerify = useCallback(async () => {
-    const code = otp.join('');
-    if (code.length !== OTP_LENGTH || isVerifying) return;
+  // Takes the code directly — no stale closure over `otp` state
+  const doVerify = useCallback(async (code: string) => {
+    if (code.length !== OTP_LENGTH || isVerifyingRef.current) return;
 
     const confirmation = phoneAuthStore.getConfirmation();
     if (!confirmation) {
@@ -93,16 +58,14 @@ export default function VerifyScreen() {
       return;
     }
 
+    isVerifyingRef.current = true;
     setIsVerifying(true);
     try {
-      // 1. Confirm OTP with Firebase — throws on wrong code
       const credential = await confirmation.confirm(code);
       if (!credential.user) throw new Error('Firebase auth failed');
 
-      // 2. Get Firebase ID token to send to our backend
       const firebaseIdToken = await credential.user.getIdToken();
 
-      // 3. Exchange Firebase token for our JWT
       const { accessToken, refreshToken, user, isNewUser } = await api.post<VerifyOtpResponse>(
         '/v1/auth/verify-otp',
         { phone, firebaseIdToken },
@@ -111,15 +74,13 @@ export default function VerifyScreen() {
       setTokens(accessToken, refreshToken);
       setSubscription(user.subscription);
 
-      // If name was captured on login screen, save it now
       const capturedName = phoneAuthStore.getFullName();
       if (capturedName && !user.fullName) {
         try {
           const { user: updated } = await api.put<{ user: typeof user }>('/v1/auth/profile', {
             fullName: capturedName,
           });
-          if (updated) setUser(updated);
-          else setUser(user);
+          setUser(updated ?? user);
         } catch {
           setUser(user);
         }
@@ -129,13 +90,11 @@ export default function VerifyScreen() {
 
       phoneAuthStore.clear();
 
-      // New customers with no name still go to profile-setup
       if (isNewUser && user.role === 'CUSTOMER' && !capturedName) {
         router.replace('/(auth)/profile-setup' as never);
         return;
       }
 
-      // Role-based redirect
       switch (user.role) {
         case 'DECODER':
         case 'MENTOR':
@@ -143,6 +102,9 @@ export default function VerifyScreen() {
           break;
         case 'ADMIN':
           router.replace('/(app)/(admin)/dashboard');
+          break;
+        case 'ANALYZER':
+          router.replace('/(app)/(analyzer)/queue' as never);
           break;
         default:
           router.replace('/(app)/(customer)/');
@@ -161,9 +123,42 @@ export default function VerifyScreen() {
         Alert.alert('Verification failed', e.message ?? 'Please try again.');
       }
     } finally {
+      isVerifyingRef.current = false;
       setIsVerifying(false);
     }
-  }, [otp, isVerifying, phone]);
+  }, [phone]);
+
+  function handleCellChange(index: number, value: string) {
+    const digit = value.replace(/\D/g, '').slice(-1);
+    const next = [...otp];
+    next[index] = digit;
+    setOtp(next);
+
+    if (digit && index < OTP_LENGTH - 1) {
+      inputRefs.current[index + 1]?.focus();
+    } else if (digit && index === OTP_LENGTH - 1 && next.every(Boolean)) {
+      // All 6 digits filled — submit immediately with the freshly-assembled code
+      void doVerify(next.join(''));
+    }
+  }
+
+  function handleCellKeyPress(index: number, key: string) {
+    if (key === 'Backspace' && !otp[index] && index > 0) {
+      const next = [...otp];
+      next[index - 1] = '';
+      setOtp(next);
+      inputRefs.current[index - 1]?.focus();
+    }
+  }
+
+  function handlePaste(text: string) {
+    const digits = text.replace(/\D/g, '').slice(0, OTP_LENGTH).split('');
+    if (digits.length === OTP_LENGTH) {
+      setOtp(digits);
+      inputRefs.current[OTP_LENGTH - 1]?.focus();
+      void doVerify(digits.join(''));
+    }
+  }
 
   async function handleResend() {
     const confirmation = phoneAuthStore.getConfirmation();
@@ -194,7 +189,6 @@ export default function VerifyScreen() {
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
         <View style={styles.container}>
-          {/* Back */}
           <TouchableOpacity
             style={styles.backButton}
             onPress={() => router.replace('/(auth)/login')}
@@ -203,7 +197,6 @@ export default function VerifyScreen() {
             <Text style={styles.backText}>← Back</Text>
           </TouchableOpacity>
 
-          {/* Header */}
           <View style={styles.header}>
             <Text style={styles.title}>Enter verification code</Text>
             <Text style={styles.subtitle}>
@@ -212,7 +205,6 @@ export default function VerifyScreen() {
             </Text>
           </View>
 
-          {/* OTP cells */}
           <View style={styles.otpRow}>
             {otp.map((digit, i) => (
               <TextInput
@@ -243,11 +235,10 @@ export default function VerifyScreen() {
             ))}
           </View>
 
-          {/* Verify button */}
           {isComplete && (
             <TouchableOpacity
               style={[styles.verifyButton, isVerifying && styles.verifyButtonLoading]}
-              onPress={handleVerify}
+              onPress={() => void doVerify(otp.join(''))}
               disabled={isVerifying}
               accessibilityRole="button"
               accessibilityLabel="Verify code"
@@ -263,7 +254,6 @@ export default function VerifyScreen() {
             </TouchableOpacity>
           )}
 
-          {/* Resend */}
           <View style={styles.resendRow}>
             {countdown > 0 ? (
               <Text style={styles.resendCountdown}>Resend code in {countdown}s</Text>
