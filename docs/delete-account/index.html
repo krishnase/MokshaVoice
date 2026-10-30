@@ -1,0 +1,219 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Delete Your MokshaVoice Account</title>
+<meta name="description" content="How to request deletion of your MokshaVoice account and associated data.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #FBF9F4;
+    --surface: #FFFFFF;
+    --surface-border: #E8E2D4;
+    --ink: #1A1F2E;
+    --ink-soft: #52596B;
+    --ink-faint: #8891A3;
+    --navy: #0F1F3D;
+    --gold: #B8872E;
+    --orange: #C25F17;
+    --rule: #E8E2D4;
+    --code-bg: #F2EEE3;
+    color-scheme: light;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #0F1F3D;
+      --surface: #16294C;
+      --surface-border: #28395C;
+      --ink: #F3F5FA;
+      --ink-soft: #B7C0D6;
+      --ink-faint: #8792AC;
+      --navy: #E9EDF7;
+      --gold: #F0C568;
+      --orange: #F4935A;
+      --rule: #28395C;
+      --code-bg: #1C2E52;
+      color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #0F1F3D;
+    --surface: #16294C;
+    --surface-border: #28395C;
+    --ink: #F3F5FA;
+    --ink-soft: #B7C0D6;
+    --ink-faint: #8792AC;
+    --navy: #E9EDF7;
+    --gold: #F0C568;
+    --orange: #F4935A;
+    --rule: #28395C;
+    --code-bg: #1C2E52;
+    color-scheme: dark;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    font-size: 16px;
+    line-height: 1.65;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap {
+    max-width: 680px;
+    margin: 0 auto;
+    padding-inline: clamp(20px, 5vw, 40px);
+    padding-block: clamp(32px, 6vw, 72px);
+  }
+  header.masthead {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding-bottom: 24px;
+    margin-bottom: 28px;
+    border-bottom: 1px solid var(--rule);
+  }
+  .mark {
+    width: 40px; height: 40px; border-radius: 11px; flex: none;
+    background: linear-gradient(155deg, var(--navy), #203864);
+    display: grid; place-items: center;
+  }
+  :root[data-theme="dark"] .mark,
+  :root:not([data-theme="light"]) .mark {
+    background: linear-gradient(155deg, var(--navy), #1A2F56);
+  }
+  .mark svg { width: 22px; height: 22px; }
+  .brand-name {
+    font-family: 'Poppins', sans-serif; font-weight: 700; font-size: 1.15rem;
+    letter-spacing: -0.01em;
+  }
+  h1 {
+    font-family: 'Poppins', sans-serif;
+    font-weight: 800;
+    font-size: clamp(1.8rem, 4.5vw, 2.3rem);
+    line-height: 1.12;
+    letter-spacing: -0.015em;
+    text-wrap: balance;
+    margin: 0 0 10px;
+  }
+  p.dek { font-size: 1.05rem; color: var(--ink-soft); margin: 0 0 32px; max-width: 56ch; }
+  h2 {
+    font-family: 'Poppins', sans-serif; font-weight: 700; font-size: 1.1rem;
+    margin: 0 0 12px;
+  }
+  p { margin: 0 0 14px; max-width: 62ch; color: var(--ink-soft); }
+  strong { color: var(--ink); font-weight: 600; }
+  section { padding-block: 24px; border-bottom: 1px solid var(--rule); }
+  section:last-of-type { border-bottom: none; }
+
+  .steps { list-style: none; margin: 0 0 4px; padding: 0; display: flex; flex-direction: column; gap: 14px; }
+  .steps li { display: flex; gap: 14px; align-items: flex-start; }
+  .steps .n {
+    flex: none; width: 26px; height: 26px; border-radius: 50%;
+    background: var(--code-bg); color: var(--gold);
+    font-family: 'Inter', sans-serif; font-weight: 600; font-size: 0.82rem;
+    display: grid; place-items: center; margin-top: 1px;
+  }
+  .steps .step-body p { margin: 0; color: var(--ink-soft); }
+
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--surface-border);
+    border-radius: 12px;
+    padding: 18px 20px;
+    margin: 4px 0 18px;
+  }
+  .card p { margin: 0 0 8px; }
+  .card p:last-child { margin: 0; }
+
+  .email-btn {
+    display: inline-flex; align-items: center; gap: 8px;
+    background: var(--orange); color: #fff;
+    font-family: 'Inter', sans-serif; font-weight: 600; font-size: 0.95rem;
+    padding: 11px 20px; border-radius: 10px;
+    text-decoration: none;
+  }
+  .email-btn:hover { opacity: 0.92; }
+
+  ul.plain { margin: 0 0 14px; padding-left: 1.2em; max-width: 60ch; color: var(--ink-soft); }
+  ul.plain li { margin-bottom: 6px; }
+  ul.plain li::marker { color: var(--gold); }
+
+  a.link { color: var(--orange); text-decoration: underline; text-underline-offset: 2px; }
+  a.link:hover { color: var(--gold); }
+
+  footer {
+    margin-top: 8px; padding-top: 24px; border-top: 1px solid var(--rule);
+    display: flex; justify-content: space-between; flex-wrap: wrap; gap: 10px;
+    font-size: 0.82rem; color: var(--ink-faint);
+  }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <header class="masthead">
+    <span class="mark">
+      <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M12 3C7 7 5 10.5 5 14a7 7 0 0 0 14 0c0-3.5-2-7-7-11Z" fill="#F0C568"/>
+        <path d="M12 7c-2.8 2.4-4 4.6-4 7a4 4 0 0 0 8 0c0-2.4-1.2-4.6-4-7Z" fill="#0F1F3D"/>
+      </svg>
+    </span>
+    <span class="brand-name">MokshaVoice</span>
+  </header>
+
+  <h1>Delete your account</h1>
+  <p class="dek">You can request deletion of your MokshaVoice account and all associated data at any time, whether or not you still have the app installed.</p>
+
+  <section>
+    <h2>How to request deletion</h2>
+    <ol class="steps">
+      <li>
+        <span class="n">1</span>
+        <div class="step-body"><p>Email us from the address you'd like us to reply to, including the <strong>phone number</strong> registered on your MokshaVoice account.</p></div>
+      </li>
+      <li>
+        <span class="n">2</span>
+        <div class="step-body"><p>We verify the request is coming from the account owner.</p></div>
+      </li>
+      <li>
+        <span class="n">3</span>
+        <div class="step-body"><p>Your account and personal data are deleted within <strong>30 days</strong>, and we confirm by email once it's done.</p></div>
+      </li>
+    </ol>
+  </section>
+
+  <section>
+    <h2>Send your request</h2>
+    <div class="card">
+      <p>Email <strong>admin@waytomoksha.org</strong> with the subject line "Delete my account" and your registered phone number.</p>
+      <a class="email-btn" href="mailto:admin@waytomoksha.org?subject=Delete%20my%20account&body=Phone%20number%20on%20my%20MokshaVoice%20account%3A%20">
+        Email admin@waytomoksha.org
+      </a>
+    </div>
+  </section>
+
+  <section>
+    <h2>What gets deleted</h2>
+    <ul class="plain">
+      <li>Your profile: phone number, display name</li>
+      <li>Your dream submissions: voice recordings and session messages</li>
+      <li>Your session and consultation history</li>
+      <li>Your push notification token</li>
+    </ul>
+    <p><strong>What we may retain:</strong> billing records tied to past purchases, where required for tax or legal compliance — these aren't personally identifying beyond what Apple, Google, or Stripe already require for payment records.</p>
+    <p>For the full picture of what we collect and why, see our <a class="link" href="/privacy/">Privacy Policy</a>.</p>
+  </section>
+
+  <footer>
+    <span>© 2026 MokshaVoice</span>
+    <span>com.mokshavoice.app</span>
+  </footer>
+</div>
+
+</body>
+</html>
