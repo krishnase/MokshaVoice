@@ -1,0 +1,489 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>MokshaVoice Privacy Policy</title>
+<meta name="description" content="MokshaVoice's privacy policy — what data the app collects, who sees dream submissions, and your rights.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #FBF9F4;
+    --surface: #FFFFFF;
+    --surface-border: #E8E2D4;
+    --ink: #1A1F2E;
+    --ink-soft: #52596B;
+    --ink-faint: #8891A3;
+    --navy: #0F1F3D;
+    --gold: #B8872E;
+    --orange: #C25F17;
+    --rule: #E8E2D4;
+    --code-bg: #F2EEE3;
+    color-scheme: light;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #0F1F3D;
+      --surface: #16294C;
+      --surface-border: #28395C;
+      --ink: #F3F5FA;
+      --ink-soft: #B7C0D6;
+      --ink-faint: #8792AC;
+      --navy: #E9EDF7;
+      --gold: #F0C568;
+      --orange: #F4935A;
+      --rule: #28395C;
+      --code-bg: #1C2E52;
+      color-scheme: dark;
+    }
+  }
+
+  :root[data-theme="dark"] {
+    --bg: #0F1F3D;
+    --surface: #16294C;
+    --surface-border: #28395C;
+    --ink: #F3F5FA;
+    --ink-soft: #B7C0D6;
+    --ink-faint: #8792AC;
+    --navy: #E9EDF7;
+    --gold: #F0C568;
+    --orange: #F4935A;
+    --rule: #28395C;
+    --code-bg: #1C2E52;
+    color-scheme: dark;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    font-size: 16px;
+    line-height: 1.65;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .wrap {
+    max-width: 1080px;
+    margin: 0 auto;
+    padding-inline: clamp(20px, 5vw, 56px);
+    padding-block: clamp(32px, 6vw, 72px);
+    display: grid;
+    grid-template-columns: 240px minmax(0, 700px);
+    gap: 56px;
+    align-items: start;
+  }
+
+  @media (max-width: 860px) {
+    .wrap { grid-template-columns: 1fr; gap: 28px; }
+    nav.toc { display: none; }
+  }
+
+  header.masthead {
+    grid-column: 1 / -1;
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 24px;
+    flex-wrap: wrap;
+    padding-bottom: 28px;
+    margin-bottom: 8px;
+    border-bottom: 1px solid var(--rule);
+  }
+
+  .brand {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .brand .mark {
+    width: 40px;
+    height: 40px;
+    border-radius: 11px;
+    background: linear-gradient(155deg, var(--navy), #1A2F56);
+    display: grid;
+    place-items: center;
+    flex: none;
+    box-shadow: 0 1px 0 rgba(255,255,255,0.06) inset;
+  }
+  :root[data-theme="light"] .brand .mark,
+  :root:not([data-theme="dark"]) .brand .mark {
+    background: linear-gradient(155deg, var(--navy), #203864);
+  }
+
+  .brand .mark svg { width: 22px; height: 22px; }
+
+  .brand .name {
+    font-family: 'Poppins', sans-serif;
+    font-weight: 700;
+    font-size: 1.15rem;
+    letter-spacing: -0.01em;
+    color: var(--ink);
+  }
+
+  .masthead .meta {
+    text-align: right;
+    font-size: 0.85rem;
+    color: var(--ink-faint);
+  }
+  .masthead .meta strong { color: var(--ink-soft); font-weight: 600; }
+
+  h1.title {
+    grid-column: 1 / -1;
+    font-family: 'Poppins', sans-serif;
+    font-weight: 800;
+    font-size: clamp(2rem, 4.2vw, 2.9rem);
+    line-height: 1.08;
+    letter-spacing: -0.015em;
+    text-wrap: balance;
+    margin: 4px 0 6px;
+    color: var(--ink);
+  }
+
+  p.dek {
+    grid-column: 1 / -1;
+    font-size: 1.05rem;
+    color: var(--ink-soft);
+    max-width: 62ch;
+    margin: 0 0 8px;
+  }
+
+  nav.toc {
+    position: sticky;
+    top: calc(env(safe-area-inset-top, 0px) + 32px);
+    font-size: 0.86rem;
+  }
+  nav.toc .toc-label {
+    font-family: 'Inter', sans-serif;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    font-size: 0.72rem;
+    color: var(--ink-faint);
+    margin-bottom: 12px;
+  }
+  nav.toc ol {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    border-left: 1px solid var(--rule);
+  }
+  nav.toc a {
+    display: block;
+    padding: 7px 0 7px 16px;
+    color: var(--ink-faint);
+    text-decoration: none;
+    border-left: 2px solid transparent;
+    margin-left: -1px;
+    transition: color .15s ease, border-color .15s ease;
+  }
+  nav.toc a:hover { color: var(--ink); border-left-color: var(--gold); }
+
+  main { min-width: 0; }
+
+  section {
+    padding-block: 28px;
+    border-bottom: 1px solid var(--rule);
+  }
+  section:last-of-type { border-bottom: none; }
+
+  h2 {
+    font-family: 'Poppins', sans-serif;
+    font-weight: 700;
+    font-size: 1.3rem;
+    letter-spacing: -0.01em;
+    margin: 0 0 14px;
+    color: var(--ink);
+    scroll-margin-top: 24px;
+  }
+  h2 .num {
+    font-family: 'Inter', sans-serif;
+    font-weight: 600;
+    color: var(--gold);
+    margin-right: 10px;
+    font-variant-numeric: tabular-nums;
+  }
+
+  h3 {
+    font-family: 'Inter', sans-serif;
+    font-weight: 600;
+    font-size: 0.98rem;
+    margin: 20px 0 8px;
+    color: var(--ink);
+  }
+
+  p { margin: 0 0 14px; max-width: 68ch; color: var(--ink-soft); }
+  p:last-child { margin-bottom: 0; }
+  strong { color: var(--ink); font-weight: 600; }
+
+  ul, ol.plain { margin: 0 0 14px; padding-left: 1.3em; max-width: 66ch; color: var(--ink-soft); }
+  li { margin-bottom: 6px; }
+  li::marker { color: var(--gold); }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 6px 0 18px;
+    font-size: 0.92rem;
+  }
+  caption {
+    text-align: left;
+    font-size: 0.78rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+    margin-bottom: 8px;
+  }
+  thead th {
+    text-align: left;
+    font-family: 'Inter', sans-serif;
+    font-weight: 600;
+    color: var(--ink);
+    padding: 9px 12px;
+    border-bottom: 1px solid var(--surface-border);
+    background: var(--surface);
+  }
+  thead th:first-child { border-top-left-radius: 8px; }
+  thead th:last-child { border-top-right-radius: 8px; }
+  tbody td {
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--rule);
+    color: var(--ink-soft);
+    vertical-align: top;
+  }
+  tbody tr:last-child td { border-bottom: 1px solid var(--surface-border); }
+  .tbl-wrap { overflow-x: auto; }
+
+  .pill {
+    display: inline-block;
+    font-size: 0.68rem;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    padding: 2px 8px;
+    border-radius: 99px;
+    background: var(--code-bg);
+    color: var(--gold);
+    margin-right: 6px;
+  }
+
+  .callout {
+    background: var(--surface);
+    border: 1px solid var(--surface-border);
+    border-left: 3px solid var(--orange);
+    border-radius: 10px;
+    padding: 14px 18px;
+    margin: 4px 0 18px;
+    font-size: 0.93rem;
+  }
+  .callout p { color: var(--ink-soft); margin: 0; }
+  .callout strong { color: var(--ink); }
+
+  code {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 0.86em;
+    background: var(--code-bg);
+    padding: 1px 6px;
+    border-radius: 5px;
+    color: var(--gold);
+  }
+
+  a.link { color: var(--orange); text-decoration: underline; text-underline-offset: 2px; }
+  a.link:hover { color: var(--gold); }
+
+  footer {
+    grid-column: 1 / -1;
+    margin-top: 8px;
+    padding-top: 24px;
+    border-top: 1px solid var(--rule);
+    display: flex;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 10px;
+    font-size: 0.82rem;
+    color: var(--ink-faint);
+  }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <header class="masthead">
+    <div class="brand">
+      <span class="mark">
+        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M12 3C7 7 5 10.5 5 14a7 7 0 0 0 14 0c0-3.5-2-7-7-11Z" fill="#F0C568"/>
+          <path d="M12 7c-2.8 2.4-4 4.6-4 7a4 4 0 0 0 8 0c0-2.4-1.2-4.6-4-7Z" fill="#0F1F3D"/>
+        </svg>
+      </span>
+      <span class="name">MokshaVoice</span>
+    </div>
+    <div class="meta"><strong>Effective date:</strong> October 30, 2026 &nbsp;·&nbsp; <strong>Last updated:</strong> October 30, 2026</div>
+  </header>
+
+  <h1 class="title">Privacy Policy</h1>
+  <p class="dek">MokshaVoice is a voice-first dream analysis app. This policy explains what we collect when you use it, who sees it, and the choices you have — written in plain language, not legal filler.</p>
+
+  <nav class="toc" aria-label="Table of contents">
+    <div class="toc-label">On this page</div>
+    <ol>
+      <li><a href="#overview">1. Overview</a></li>
+      <li><a href="#collect">2. Information we collect</a></li>
+      <li><a href="#use">3. How we use it</a></li>
+      <li><a href="#share">4. Who sees your dream submissions</a></li>
+      <li><a href="#third-parties">5. Third-party services</a></li>
+      <li><a href="#retention">6. Data retention</a></li>
+      <li><a href="#rights">7. Your rights and choices</a></li>
+      <li><a href="#children">8. Children's privacy</a></li>
+      <li><a href="#security">9. Security</a></li>
+      <li><a href="#changes">10. Changes to this policy</a></li>
+      <li><a href="#contact">11. Contact us</a></li>
+    </ol>
+  </nav>
+
+  <main>
+    <section id="overview">
+      <h2><span class="num">01</span>Overview</h2>
+      <p>MokshaVoice (“we,” “us,” “our”) operates the MokshaVoice mobile app for iOS and Android. The app lets you record a spoken description of a dream and have it reviewed and interpreted by a human decoder, analyzer, or mentor — plus related features like session chat, push notifications, and a premium subscription.</p>
+      <p>This policy covers the data we collect through the app and our backend services, how it's used, who it's shared with, and the controls you have over it.</p>
+    </section>
+
+    <section id="collect">
+      <h2><span class="num">02</span>Information we collect</h2>
+      <p>We collect the minimum needed to run the service:</p>
+
+      <div class="tbl-wrap">
+        <table>
+          <caption>Data categories</caption>
+          <thead>
+            <tr><th>Category</th><th>What it includes</th><th>Why we collect it</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><span class="pill">Account</span></td>
+              <td>Phone number, display name (optional)</td>
+              <td>Sign-in via SMS one-time code, and identifying you in sessions</td>
+            </tr>
+            <tr>
+              <td><span class="pill">Dream content</span></td>
+              <td>Voice recordings you submit, their transcribed/text content, session messages</td>
+              <td>The core service — letting a decoder or analyzer review and respond to your dream</td>
+            </tr>
+            <tr>
+              <td><span class="pill">Usage</span></td>
+              <td>Session status, timestamps, how many dreams you've submitted this billing period</td>
+              <td>Running the free/premium quota system and routing sessions to available staff</td>
+            </tr>
+            <tr>
+              <td><span class="pill">Device</span></td>
+              <td>Push notification token (FCM)</td>
+              <td>Notifying you when a decoder responds to your dream</td>
+            </tr>
+            <tr>
+              <td><span class="pill">Billing</span></td>
+              <td>Subscription status and plan, purchase/renewal events</td>
+              <td>Unlocking premium features; we do not see or store your card number — payment is handled entirely by Apple, Google, or Stripe</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="callout">
+        <p><strong>We don't collect:</strong> your precise location, contacts, photos outside what you explicitly attach, or browsing activity outside the app.</p>
+      </div>
+    </section>
+
+    <section id="use">
+      <h2><span class="num">03</span>How we use it</h2>
+      <ul>
+        <li>Deliver the core service: routing your recorded dream to an available decoder/analyzer and returning their response</li>
+        <li>Verify your identity via SMS one-time password at sign-in</li>
+        <li>Track your monthly quota (5 free / 15 premium dream analyses) and enforce subscription limits</li>
+        <li>Send push notifications about session activity</li>
+        <li>Process and validate subscription purchases and renewals</li>
+        <li>Diagnose bugs and crashes, and keep the service secure</li>
+      </ul>
+      <p>We do not sell your personal data, and we do not use your dream content to train third-party AI models or for advertising.</p>
+    </section>
+
+    <section id="share">
+      <h2><span class="num">04</span>Who sees your dream submissions</h2>
+      <p>Dream recordings and the text of your session are visible to the staff involved in your session: the <strong>decoder</strong> or <strong>analyzer</strong> assigned to review it, and, where applicable, a <strong>mentor</strong> handling a follow-up consultation. These are people operating the service, not the general public, and they're bound to use what you share only to provide your analysis.</p>
+      <p>We don't share your dream content with other customers, publish it, or disclose it to outside parties except where <a href="#third-parties" class="link">Section 5</a> or the law requires it.</p>
+    </section>
+
+    <section id="third-parties">
+      <h2><span class="num">05</span>Third-party services</h2>
+      <p>We rely on the following providers to run MokshaVoice. Each only receives the data necessary for its function:</p>
+      <div class="tbl-wrap">
+        <table>
+          <thead>
+            <tr><th>Provider</th><th>Purpose</th><th>Data involved</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>Firebase (Google)</td><td>Phone authentication, push notification delivery</td><td>Phone number, device push token</td></tr>
+            <tr><td>Amazon Web Services (S3 / CloudFront)</td><td>Secure storage and delivery of voice recordings</td><td>Audio files</td></tr>
+            <tr><td>RevenueCat</td><td>Subscription management across App Store / Play Store</td><td>Purchase events, entitlement status</td></tr>
+            <tr><td>Stripe</td><td>Web-based subscription payments (fallback to in-app purchases)</td><td>Payment processing — we never see full card numbers</td></tr>
+            <tr><td>Apple / Google</td><td>In-app purchase processing on iOS/Android</td><td>Purchase receipts</td></tr>
+            <tr><td>Railway</td><td>Application hosting, database, and background jobs</td><td>All data described in Section 2, stored at rest</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="retention">
+      <h2><span class="num">06</span>Data retention</h2>
+      <p>We keep account and session data for as long as your account is active, so you can see your past dream analyses and conversation history. If you delete your account, we delete your personal data and dream content within a reasonable period, except where we're required to retain billing records for tax or legal purposes.</p>
+    </section>
+
+    <section id="rights">
+      <h2><span class="num">07</span>Your rights and choices</h2>
+      <ul>
+        <li><strong>Access or export:</strong> ask us for a copy of the data tied to your account</li>
+        <li><strong>Correction:</strong> update your display name any time in the app's profile screen</li>
+        <li><strong>Deletion:</strong> request your account and associated data be deleted, via the contact below</li>
+        <li><strong>Notifications:</strong> turn off push notifications at any time in your device settings</li>
+        <li><strong>Subscription:</strong> manage or cancel your subscription through the App Store, Play Store, or Stripe customer portal, depending on how you subscribed</li>
+      </ul>
+    </section>
+
+    <section id="children">
+      <h2><span class="num">08</span>Children's privacy</h2>
+      <p>MokshaVoice is not directed at children under 13 (or the minimum age of digital consent in your country), and we don't knowingly collect data from them. If you believe a child has created an account, contact us and we'll remove it.</p>
+    </section>
+
+    <section id="security">
+      <h2><span class="num">09</span>Security</h2>
+      <p>Voice recordings and account data are transmitted over encrypted connections (HTTPS) and stored with access controls limiting who can reach them. No method of transmission or storage is 100% secure, but we work to protect your information using industry-standard practices.</p>
+    </section>
+
+    <section id="changes">
+      <h2><span class="num">10</span>Changes to this policy</h2>
+      <p>If we make material changes to this policy, we'll update the "Last updated" date above and, where appropriate, notify you in the app.</p>
+    </section>
+
+    <section id="contact">
+      <h2><span class="num">11</span>Contact us</h2>
+      <p>Questions about this policy or a request to access or delete your data: <a class="link" href="mailto:privacy@mokshavoice.app">privacy@mokshavoice.app</a></p>
+    </section>
+  </main>
+
+  <footer>
+    <span>© 2026 MokshaVoice</span>
+    <span>com.mokshavoice.app</span>
+  </footer>
+</div>
+
+</body>
+</html>

@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>MokshaVoice</title>
+<meta name="description" content="MokshaVoice — voice-first dream analysis.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@700;800&family=Inter:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #FBF9F4;
+    --ink: #1A1F2E;
+    --ink-soft: #52596B;
+    --navy: #0F1F3D;
+    --gold: #B8872E;
+    --orange: #C25F17;
+    color-scheme: light;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0F1F3D;
+      --ink: #F3F5FA;
+      --ink-soft: #B7C0D6;
+      --navy: #E9EDF7;
+      --gold: #F0C568;
+      --orange: #F4935A;
+      color-scheme: dark;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    min-height: 100vh;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 24px;
+    padding-block: calc(24px + env(safe-area-inset-top, 0px)) calc(24px + env(safe-area-inset-bottom, 0px));
+    gap: 10px;
+  }
+  .mark {
+    width: 56px;
+    height: 56px;
+    border-radius: 15px;
+    background: linear-gradient(155deg, var(--navy), #203864);
+    display: grid;
+    place-items: center;
+    margin-bottom: 8px;
+  }
+  .mark svg { width: 30px; height: 30px; }
+  h1 {
+    font-family: 'Poppins', sans-serif;
+    font-weight: 800;
+    font-size: clamp(1.8rem, 5vw, 2.4rem);
+    letter-spacing: -0.01em;
+    margin: 0;
+  }
+  p { color: var(--ink-soft); max-width: 40ch; margin: 0 0 18px; font-size: 1.05rem; }
+  a.link {
+    color: var(--orange);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+    font-size: 0.95rem;
+  }
+  a.link:hover { color: var(--gold); }
+</style>
+</head>
+<body>
+  <span class="mark">
+    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M12 3C7 7 5 10.5 5 14a7 7 0 0 0 14 0c0-3.5-2-7-7-11Z" fill="#F0C568"/>
+      <path d="M12 7c-2.8 2.4-4 4.6-4 7a4 4 0 0 0 8 0c0-2.4-1.2-4.6-4-7Z" fill="#0F1F3D"/>
+    </svg>
+  </span>
+  <h1>MokshaVoice</h1>
+  <p>Voice-first dream analysis — record a dream, get it analyzed by a real person.</p>
+  <a class="link" href="/privacy/">Privacy Policy</a>
+</body>
+</html>
